@@ -30,7 +30,19 @@
 ; M_boolean takes a conditional and a state
 ; evaluates the conditional (including dealing with comparison operators)
 ; returns true or false
-;(define M_boolean)
+(define M_boolean
+  (lambda (conditional state)
+    (cond
+      ((boolean? (car conditional))    (car conditional))
+      ((eq? (car conditional) '==)     (eq? (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state)))
+      ((eq? (car conditional) '!=)     (not (eq? (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state))))
+      ((eq? (car conditional) '<)      (< (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state)))
+      ((eq? (car conditional) '<=)     (<= (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state)))
+      ((eq? (car conditional) '>)      (> (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state)))
+      ((eq? (car conditional) '>=)     (>= (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state)))
+      ((eq? (car conditional) '&&)     (and (M_boolean (car (cdr conditional)) state) (M_boolean (car (cdr (cdr conditional))) state)))
+      ((eq? (car conditional) '||)     (or (M_boolean (car (cdr conditional)) state) (M_boolean (car (cdr (cdr conditional))) state)))
+      ((eq? (car conditional) '!)      (not (M_boolean (car (cdr conditional)) state))))))
 
 ; M_value takes an expression and a state
 ; evaluates the expression
