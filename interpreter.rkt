@@ -16,8 +16,16 @@
 ; removeBinding takes a name and a state
 ; removes that key-value pair from the state
 ; Returns the new state
-;(define removeBinding)
-
+; if the state doesn't contain the name of the key-value pair, we give error
+; but if (eq?(car(car state) name) cdr state thus removed that pairing
+; else (cons (car state) removebinding(cdr state)
+;(removeBinding 'x '((y 5) (x 7) (k 19) (b 10)))
+(define removeBinding
+  (lambda (name state)
+    (cond
+      [(null? state) state]
+      [(eq? (caar state) name) (cdr state)]
+      [else (cons (car state) (removeBinding name (cdr state)))])))
 
 ; M_boolean takes a conditional and a state
 ; evaluates the conditional (including dealing with comparison operators)
