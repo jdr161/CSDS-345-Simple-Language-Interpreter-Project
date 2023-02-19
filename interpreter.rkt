@@ -4,8 +4,14 @@
 
 ; addBinding takes a name, value, and a state
 ; adds that key-value pair to the state
+; replaces any existing binding if one already exists with the same name
 ; returns the state
-;1(define addBinding)
+(define addBinding
+  (lambda (name val state)
+    (cond
+      [(null? state) (list(list name val))]
+      [(eq? (car (car state)) name) (cons (list(list name val)) (cdr state))]
+      (else (cons (car state) (addBinding name val (cdr state)))))))
 
 ; removeBinding takes a name and a state
 ; removes that key-value pair from the state
@@ -17,11 +23,7 @@
 (define removeBinding
   (lambda (name state)
     (cond
-<<<<<<< Updated upstream
-      [(null? state) (error "cannot find binding name pair in state")]
-=======
       [(null? state) state]
->>>>>>> Stashed changes
       [(eq? (caar state) name) (cdr state)]
       [else (cons (car state) (removeBinding name (cdr state)))])))
 
