@@ -10,13 +10,20 @@
   (lambda (name val state)
     (cond
       [(null? state) (list(list name val))]
-      [(eq? (car (car state)) name) (cons (list(list name val)) (cdr state))]
+      [(eq? (car (car state)) name) (cons (list name val) (cdr state))]
       (else (cons (car state) (addBinding name val (cdr state)))))))
 
-; removeBinding takes a name and a state
-; removes that key-value pair from the state
-; Returns the new state
-;(define removeBinding)
+; if the state doesn't contain the name of the key-value pair, we give error
+; but if (eq?(car(car state) name) cdr state thus removed that pairing
+; else (cons (car state) removebinding(cdr state)
+;(removeBinding 'x '((y 5) (x 7) (k 19) (b 10)))
+;WW
+(define removeBinding
+  (lambda (name state)
+    (cond
+      [(null? state) state]
+      [(eq? (caar state) name) (cdr state)]
+      [else (cons (car state) (removeBinding name (cdr state)))])))
 
 ; findBinding takes a name and a state
 ; finds the binding with the correct name
@@ -29,6 +36,7 @@
       [(null? state) (error name "variable used before declaration")]
       [(eq? (car (car state)) name) (car (cdr (car state)))]
       (else (findBinding name (cdr state))))))
+
 
 ; M_value takes an expression and a state
 ; evaluates the expression
@@ -51,8 +59,19 @@
 ; M_boolean takes a conditional and a state
 ; evaluates the conditional (including dealing with comparison operators)
 ; returns true or false
-;(define M_boolean)
-    
+(define M_boolean
+  (lambda (conditional state)
+    (cond
+      ((boolean? (car conditional))    (car conditional))
+      ((eq? (car conditional) '==)     (eq? (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state)))
+      ((eq? (car conditional) '!=)     (not (eq? (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state))))
+      ((eq? (car conditional) '<)      (< (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state)))
+      ((eq? (car conditional) '<=)     (<= (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state)))
+      ((eq? (car conditional) '>)      (> (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state)))
+      ((eq? (car conditional) '>=)     (>= (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state)))
+      ((eq? (car conditional) '&&)     (and (M_boolean (car (cdr conditional)) state) (M_boolean (car (cdr (cdr conditional))) state)))
+      ((eq? (car conditional) '||)     (or (M_boolean (car (cdr conditional)) state) (M_boolean (car (cdr (cdr conditional))) state)))
+      ((eq? (car conditional) '!)      (not (M_boolean (car (cdr conditional)) state))))))
 
 
 
@@ -64,9 +83,24 @@
 ;(define M_declaration)
 
 ; M_assignment takes an assignment statement (in the form (= variable expression)) and a state
+; WW
 ; assigns the value of the expression to the variable in the state
 ; returns the new state
-;(define M_assignment)
+; helper function declared? finds if a given var name is in the state or not
+ (define declared?
+  (lambda (name state)
+    (cond
+      [(null? state) #f]
+      [(eq? (car(car state)) name) #t]
+      [else (declared? name (cdr state))])))
+; expr meaning (= variable expression)
+; state is a list of bindings currently
+;(M_assignment '(= x 10) '((y 5) (x 5) (z 19) (k 27)))
+(define M_assignment
+  (lambda (expr state)
+    (cond
+    [(and (eq? (car expr) '=) (declared? (car(cdr expr)) state)) (addBinding (car (cdr expr)) (car(cdr(cdr expr))) state)]
+    [else state])))
 
 ; M_return takes a return statement (in the form (return expression)) and a state
 ; evaluates the expression
