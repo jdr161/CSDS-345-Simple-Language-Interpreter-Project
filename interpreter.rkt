@@ -9,6 +9,8 @@
 (define addBinding
   (lambda (name val state)
     (cond
+      [(eq? val 'true) (addBinding name #t state)]
+      [(eq? val 'false) (addBinding name #f state)]
       [(null? state) (list(list name val))]
       [(eq? (car (car state)) name) (cons (list name val) (cdr state))]
       (else (cons (car state) (addBinding name val (cdr state)))))))
@@ -33,10 +35,11 @@
 (define findBinding
   (lambda (name state)
     (cond
+      [(eq? name 'true) #t]
+      [(eq? name 'false) #f]
       [(null? state) (error name "variable used before declaration")]
       [(eq? (car (car state)) name) (car (cdr (car state)))]
       (else (findBinding name (cdr state))))))
-
 
 ; M_value takes an expression and a state
 ; evaluates the expression
@@ -71,7 +74,8 @@
       ((eq? (car conditional) '>=)     (>= (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state)))
       ((eq? (car conditional) '&&)     (and (M_boolean (car (cdr conditional)) state) (M_boolean (car (cdr (cdr conditional))) state)))
       ((eq? (car conditional) '||)     (or (M_boolean (car (cdr conditional)) state) (M_boolean (car (cdr (cdr conditional))) state)))
-      ((eq? (car conditional) '!)      (not (M_boolean (car (cdr conditional)) state))))))
+      ((eq? (car conditional) '!)      (not (M_boolean (car (cdr conditional)) state)))
+      (else (error "unexpected conditional operator")))))
 
 
 
