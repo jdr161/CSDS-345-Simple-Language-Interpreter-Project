@@ -20,6 +20,7 @@
 ; but if (eq?(car(car state) name) cdr state thus removed that pairing
 ; else (cons (car state) removebinding(cdr state)
 ;(removeBinding 'x '((y 5) (x 7) (k 19) (b 10)))
+;WW
 (define removeBinding
   (lambda (name state)
     (cond
@@ -46,13 +47,24 @@
 ;(define M_declaration)
 
 ; M_assignment takes an assignment statement (in the form (= variable expression)) and a state
+; WW
 ; assigns the value of the expression to the variable in the state
 ; returns the new state
+; helper function declared? finds if a given var name is in the state or not
+ (define declared?
+  (lambda (name state)
+    (cond
+      [(null? state) #f]
+      [(eq? (car(car state)) name) #t]
+      [else (declared? name (cdr state))])))
 ; expr meaning (= variable expression)
 ; state is a list of bindings currently
-
-        
-        
+;(M_assignment '(= x 10) '((y 5) (x 5) (z 19) (k 27)))
+(define M_assignment
+  (lambda (expr state)
+    (cond
+    [(and (eq? (car expr) '=) (declared? (car(cdr expr)) state)) (addBinding (car (cdr expr)) (car(cdr(cdr expr))) state)]
+    [else state])))
 
 ; M_return takes a return statement (in the form (return expression)) and a state
 ; evaluates the expression
