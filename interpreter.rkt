@@ -10,7 +10,7 @@
   (lambda (name val state)
     (cond
       [(null? state) (list(list name val))]
-      [(eq? (car (car state)) name) (cons (list(list name val)) (cdr state))]
+      [(eq? (car (car state)) name) (cons (list name val) (cdr state))]
       (else (cons (car state) (addBinding name val (cdr state)))))))
 
 ; removeBinding takes a name and a state
@@ -48,7 +48,11 @@
 ; M_assignment takes an assignment statement (in the form (= variable expression)) and a state
 ; assigns the value of the expression to the variable in the state
 ; returns the new state
-;(define M_assignment)
+; expr meaning (= variable expression)
+; state is a list of bindings currently
+
+        
+        
 
 ; M_return takes a return statement (in the form (return expression)) and a state
 ; evaluates the expression
