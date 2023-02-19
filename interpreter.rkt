@@ -18,16 +18,42 @@
 ; Returns the new state
 ;(define removeBinding)
 
+; findBinding takes a name and a state
+; finds the binding with the correct name
+; if not binding with the inputted name can be found
+; throws an error using (error msg)
+; returns the value of the binding
+(define findBinding
+  (lambda (name state)
+    (cond
+      [(null? state) (error name "variable used before declaration")]
+      [(eq? (car (car state)) name) (car (cdr (car state)))]
+      (else (findBinding name (cdr state))))))
+
+; M_value takes an expression and a state
+; evaluates the expression
+; expressions can be a number, a variable, or an operator with two subexpressions
+; returns the value of the expression
+(define M_value
+  (lambda (expr state)
+    (cond
+      [(not (list? expr)) ; if the expression is just a single number or variable
+         (if (number? expr)
+            expr
+            (findBinding expr state))]
+      [(eq? (car expr) '+) (+ (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state))]
+      [(eq? (car expr) '-) (- (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state))]
+      [(eq? (car expr) '*) (* (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state))]
+      [(eq? (car expr) '/) (/ (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state))]
+      [(eq? (car expr) '%) (modulo (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state))]
+      (else (error "unexpected operator")))))
 
 ; M_boolean takes a conditional and a state
 ; evaluates the conditional (including dealing with comparison operators)
 ; returns true or false
 ;(define M_boolean)
+    
 
-; M_value takes an expression and a state
-; evaluates the expression
-; returns the value of the expression
-;(define M_value)
 
 
 ; M_declaration takes a declaration statement (in the form (var variable) or (var variable value)) and a state
