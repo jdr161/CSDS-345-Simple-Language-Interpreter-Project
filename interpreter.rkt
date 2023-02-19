@@ -17,7 +17,11 @@
 (define removeBinding
   (lambda (name state)
     (cond
+<<<<<<< Updated upstream
       [(null? state) (error "cannot find binding name pair in state")]
+=======
+      [(null? state) state]
+>>>>>>> Stashed changes
       [(eq? (caar state) name) (cdr state)]
       [else (cons (car state) (removeBinding name (cdr state)))])))
 
