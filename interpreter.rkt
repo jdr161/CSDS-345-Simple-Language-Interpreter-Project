@@ -128,13 +128,29 @@
 ; checks what kind of statement the first statement in the syntax tree is and calls the correct function on it
 ; recurses on itself with the the cdr of the syntax tree and the state returned from the the function called on the car of the syntax tree
 ; if the state is just a single value, returns that value
-; James
-;(define M_state)
+(define M_state
+  (lambda (tree state)
+    (cond
+      [(null? tree) (error "no return value")]
+      [(eq? 'var (car (car tree))) (M_state (cdr tree) (M_declaration (car tree) state))]
+      [(eq? '= (car (car tree))) (M_state (cdr tree) (M_assignment (car tree) state))]
+      [(eq? 'return (car (car tree))) (M_return (car tree) state)]
+      [(eq? 'if (car (car tree))) (M_state (cdr tree) (M_if (car tree) state))]
+      [(eq? 'while (car (car tree))) (M_state (cdr tree) (M_while (car tree) state))]
+      (else (error "unrecognized statement type")))))
+  
 
 ; interpret takes a filename
 ; calls the parser to get the syntax tree
 ; calls M_state on that syntax tree
 ; returns the return value from that syntax tree
-;(define interpret
-  ;(lambda (filename)
-    ;(M_state(parser filename))))
+(define interpret
+  (lambda (filename)
+    (M_state(parser filename))))
+
+
+
+
+
+
+  
