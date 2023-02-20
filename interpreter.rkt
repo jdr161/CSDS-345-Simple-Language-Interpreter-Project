@@ -45,6 +45,7 @@
 ; evaluates the expression
 ; expressions can be a number, a variable, or an operator with two subexpressions
 ; returns the value of the expression
+
 (define M_value
   (lambda (expr state)
     (cond
@@ -78,12 +79,12 @@
       (else (error "unexpected conditional operator")))))
 
 
-
 ; M_declaration takes a declaration statement (in the form (var variable) or (var variable value)) and a state
 ; checks that the variable name is available and adds the new variable to the state
 ; if the variable name is not available, calls the Scheme (error ...) function
 ; if the variable does not have a value assigned in the passed in statement, sets the value to null
 ; returns the new state
+; Maria
 ;(define M_declaration)
 
 ; M_assignment takes an assignment statement (in the form (= variable expression)) and a state
@@ -114,17 +115,20 @@
 ; M_if takes an if statement (in the form (if conditional then-statement optional-else-statement)) and a state
 ; evaluates the conditional and calls M_state on the correct statement as necessary
 ; returns the new state
+; WW
 ;(define M_if)
 
 ; M_while takes a while statement (in the form 	(while conditional body-statement)) and a state
 ; recurses if the conditional returns true
 ; returns the state if the conditional returns false
+; Maria
 ;(define M_while)       
 
 ; M_state takes a syntax tree and a state
 ; checks what kind of statement the first statement in the syntax tree is and calls the correct function on it
 ; recurses on itself with the the cdr of the syntax tree and the state returned from the the function called on the car of the syntax tree
 ; if the state is just a single value, returns that value
+; James
 ;(define M_state)
 
 ; interpret takes a filename
