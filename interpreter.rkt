@@ -97,7 +97,7 @@
     (cond
       [(declared? (car (car statement)) state) (error "variable name is already taken")]
       [(null? (cdr (car (car statement))))     (addBinding (car (car statement)) null state)]
-      (else                                    (addBinding (car (car statement)) (car (car (car statement))) state))
+      (else                                    (addBinding (car (car statement)) (car (car (car statement))) state)))))
 
 ; M_assignment takes an assignment statement (in the form (= variable expression)) and a state
 ; WW
@@ -115,7 +115,9 @@
 ; M_return takes a return statement (in the form (return expression)) and a state
 ; evaluates the expression
 ; returns the value of the expression
-;(define M_return)
+(define M_return
+  (lambda (statement state)
+    (M_value (car (cdr statement)) state)))
 
 ; M_if takes an if statement (in the form (if conditional then-statement optional-else-statement)) and a state
 ; evaluates the conditional and calls M_state on the correct statement as necessary
@@ -136,9 +138,10 @@
 ; Maria
 (define M_while
   (lambda (cstatements state)
-    [(M_boolean (car (cdr cstatements)))    (M_while cstatements (M_state (cons (car (cdr (cdr statements))) '()) state))] ;M_state updates the estate to after the operation and
-    ;we call cstatements on the while operation again and looping until the state updates to make the condition false then we terminate
-    [else state] ;if returned false then just return the state
+    (cond
+      [(M_boolean (car (cdr cstatements)))    (M_while cstatements (M_state (cons (car (cdr (cdr cstatements))) '()) state))] ;M_state updates the estate to after the operation and
+      ;we call cstatements on the while operation again and looping until the state updates to make the condition false then we terminate
+      (else state)))) ;if returned false then just return the state
     ;also we cons the "() to the end to every M_state call because if we pass in (= x 10) into M _state, it is not a sublist like ((= x 10))
     ;so then the (car (car tree)) won't work because that is intended for the ((var x 10) (= x 12)) syntax tree 
 
