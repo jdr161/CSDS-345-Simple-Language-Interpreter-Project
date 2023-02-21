@@ -54,7 +54,6 @@
 ; evaluates the expression
 ; expressions can be a number, a variable, or an operator with two subexpressions
 ; returns the value of the expression
-
 (define M_value
   (lambda (expr state)
     (cond
@@ -117,7 +116,18 @@
 ; returns the value of the expression
 (define M_return
   (lambda (statement state)
-    (M_value (car (cdr statement)) state)))
+    (cond
+      [(not (list? statement))       (M_value statement state)] ; statement is a number, variable, 'true, or 'false
+      [(eq? (car statement) '==)     (eq? (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state))]
+      [(eq? (car statement) '!=)     (not (eq? (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)))]
+      [(eq? (car statement) '<)      (< (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state))]
+      [(eq? (car statement) '<=)     (<= (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state))]
+      [(eq? (car statement) '>)      (> (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state))]
+      [(eq? (car statement) '>=)     (>= (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state))]
+      [(eq? (car statement) '&&)     (and (M_boolean (car (cdr statement)) state) (M_boolean (car (cdr (cdr statement))) state))]
+      [(eq? (car statement) '||)     (or (M_boolean (car (cdr statement)) state) (M_boolean (car (cdr (cdr statement))) state))]
+      [(eq? (car statement) '!)      (not (M_boolean (car (cdr statement)) state))]
+      (else                          (M_value (car (cdr statement)) state)))))
 
 ; M_if takes an if statement (in the form (if conditional then-statement optional-else-statement)) and a state
 ; evaluates the conditional and calls M_state on the correct statement as necessary
@@ -152,12 +162,12 @@
 (define M_state
   (lambda (tree state)
     (cond
-      [(null? tree) (error "no return value")]
-      [(eq? 'var (car (car tree))) (M_state (cdr tree) (M_declaration (car tree) state))]
-      [(eq? '= (car (car tree))) (M_state (cdr tree) (M_assignment (car tree) state))]
+      [(null? tree)                   (error "no return value")]
+      [(eq? 'var (car (car tree)))    (M_state (cdr tree) (M_declaration (car tree) state))]
+      [(eq? '= (car (car tree)))      (M_state (cdr tree) (M_assignment (car tree) state))]
       [(eq? 'return (car (car tree))) (M_return (car tree) state)]
-      [(eq? 'if (car (car tree))) (M_state (cdr tree) (M_if (car tree) state))]
-      [(eq? 'while (car (car tree))) (M_state (cdr tree) (M_while (car tree) state))]
+      [(eq? 'if (car (car tree)))     (M_state (cdr tree) (M_if (car tree) state))]
+      [(eq? 'while (car (car tree)))  (M_state (cdr tree) (M_while (car tree) state))]
       (else (error "unrecognized statement type")))))
   
 
