@@ -41,6 +41,15 @@
       [(eq? (car (car state)) name) (car (cdr (car state)))]
       (else (findBinding name (cdr state))))))
 
+; helper function declared? finds if a given var name is in the state or not
+ (define declared?
+  (lambda (name state)
+    (cond
+      [(null? state) #f]
+      [(eq? (car(car state)) name) #t]
+      [else (declared? name (cdr state))])))
+
+
 ; M_value takes an expression and a state
 ; evaluates the expression
 ; expressions can be a number, a variable, or an operator with two subexpressions
@@ -84,20 +93,18 @@
 ; if the variable name is not available, calls the Scheme (error ...) function
 ; if the variable does not have a value assigned in the passed in statement, sets the value to null
 ; returns the new state
-; Maria
-;(define M_declaration)
+(define M_declaration
+  (lambda (statement state)
+    (cond
+      [(declared? (car (car statement)) state) (error "variable name is already taken")]
+      [(null? (cdr (car (car statement))))     (addBinding (car (car statement)) null state)]
+      (else                                    (addBinding (car (car statement)) (car (car (car statement))) state))
+    
 
 ; M_assignment takes an assignment statement (in the form (= variable expression)) and a state
 ; WW
 ; assigns the value of the expression to the variable in the state
 ; returns the new state
-; helper function declared? finds if a given var name is in the state or not
- (define declared?
-  (lambda (name state)
-    (cond
-      [(null? state) #f]
-      [(eq? (car(car state)) name) #t]
-      [else (declared? name (cdr state))])))
 ; expr meaning (= variable expression)
 ; state is a list of bindings currently
 ;(M_assignment '(= x 10) '((y 5) (x 5) (z 19) (k 27)))
@@ -116,7 +123,6 @@
 ; evaluates the conditional and calls M_state on the correct statement as necessary
 ; returns the new state
 ; WW
-
 (define M_if
   (lambda (statements state)
     (cond
