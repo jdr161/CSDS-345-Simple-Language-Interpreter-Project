@@ -90,7 +90,6 @@
 
 ; M_declaration takes a declaration statement (in the form (var variable) or (var variable value)) and a state
 ; checks that the variable name is available and adds the new variable to the state
-; if the variable name is not available, calls the Scheme (error ...) function
 ; if the variable does not have a value assigned in the passed in statement, sets the value to null
 ; returns the new state
 (define M_declaration
@@ -99,7 +98,6 @@
       [(declared? (car (car statement)) state) (error "variable name is already taken")]
       [(null? (cdr (car (car statement))))     (addBinding (car (car statement)) null state)]
       (else                                    (addBinding (car (car statement)) (car (car (car statement))) state))
-    
 
 ; M_assignment takes an assignment statement (in the form (= variable expression)) and a state
 ; WW
