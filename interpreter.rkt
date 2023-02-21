@@ -114,7 +114,13 @@
 ; M_if takes an if statement (in the form (if conditional then-statement optional-else-statement)) and a state
 ; evaluates the conditional and calls M_state on the correct statement as necessary
 ; returns the new state
+<<<<<<< Updated upstream
 ;(define M_if)
+=======
+; (M_if 
+;(define M_if
+
+>>>>>>> Stashed changes
 
 ; M_while takes a while statement (in the form 	(while conditional body-statement)) and a state
 ; recurses if the conditional returns true
