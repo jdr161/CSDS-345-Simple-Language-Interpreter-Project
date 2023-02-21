@@ -25,7 +25,7 @@
     (cond
       [(null? state) state]
       [(eq? (caar state) name) (cdr state)]
-      [else (cons (car state) (removeBinding name (cdr state)))])))
+      (else (cons (car state) (removeBinding name (cdr state)))))))
 
 ; findBinding takes a name and a state
 ; finds the binding with the correct name
@@ -94,9 +94,9 @@
 (define M_declaration
   (lambda (statement state)
     (cond
-      [(declared? (car (car statement)) state) (error "variable name is already taken")]
-      [(null? (cdr (car (car statement))))     (addBinding (car (car statement)) null state)]
-      (else                                    (addBinding (car (car statement)) (car (car (car statement))) state)))))
+      [(declared? (car (cdr statement)) state) (error "variable name is already taken")]
+      [(null? (cdr (cdr statement)))           (addBinding (car (cdr statement)) null state)]
+      (else                                    (addBinding (car (cdr statement)) (car (cdr (cdr statement))) state)))))
 
 ; M_assignment takes an assignment statement (in the form (= variable expression)) and a state
 ; WW
@@ -149,8 +149,7 @@
 (define M_while
   (lambda (cstatements state)
     (cond
-      [(M_boolean (car (cdr cstatements)))    (M_while cstatements (M_state (cons (car (cdr (cdr cstatements))) '()) state))] ;M_state updates the estate to after the operation and
-      ;we call cstatements on the while operation again and looping until the state updates to make the condition false then we terminate
+      [(M_boolean (car (cdr cstatements)) state) (M_while cstatements (M_state (cons (car (cdr (cdr cstatements))) '()) state))] ;M_state updates the estate to after the operation and
       (else state)))) ;if returned false then just return the state
     ;also we cons the "() to the end to every M_state call because if we pass in (= x 10) into M _state, it is not a sublist like ((= x 10))
     ;so then the (car (car tree)) won't work because that is intended for the ((var x 10) (= x 12)) syntax tree 
@@ -177,7 +176,10 @@
 ; returns the return value from that syntax tree
 (define interpret
   (lambda (filename)
-    (M_state(parser filename))))
+    (M_state(parser filename) '())))
+
+(parser "test1.txt")
+(interpret "test1.txt")
 
 
 
