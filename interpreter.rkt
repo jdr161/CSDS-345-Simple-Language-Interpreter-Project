@@ -116,7 +116,15 @@
 ; evaluates the conditional and calls M_state on the correct statement as necessary
 ; returns the new state
 ; WW
-;(define M_if)
+
+(define M_if
+  (lambda (statements state)
+    (cond
+      [(null? statements) state] ; i assume if passed in it is not gonna be null though
+      [(M_boolean (car (cdr statements))) (M_state (cons (car (cdr (cdr statements))) '()) state)]
+      [(null? (car (cdr (cdr (cdr statements))))) state] ;check if the else statemet is nullthen just return state as it is
+      [else (M_state (cons (car (cdr (cdr (cdr statements)))) '()) state)]))) ; return the false statement state
+
 
 ; M_while takes a while statement (in the form 	(while conditional body-statement)) and a state
 ; recurses if the conditional returns true
