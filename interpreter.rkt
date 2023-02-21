@@ -134,7 +134,13 @@
 ; recurses if the conditional returns true
 ; returns the state if the conditional returns false
 ; Maria
-;(define M_while)       
+(define M_while
+  (lambda (cstatements state)
+    [(M_boolean (car (cdr cstatements)))    (M_while cstatements (M_state (cons (car (cdr (cdr statements))) '()) state))] ;M_state updates the estate to after the operation and
+    ;we call cstatements on the while operation again and looping until the state updates to make the condition false then we terminate
+    [else state] ;if returned false then just return the state
+    ;also we cons the "() to the end to every M_state call because if we pass in (= x 10) into M _state, it is not a sublist like ((= x 10))
+    ;so then the (car (car tree)) won't work because that is intended for the ((var x 10) (= x 12)) syntax tree 
 
 ; M_state takes a syntax tree and a state
 ; checks what kind of statement the first statement in the syntax tree is and calls the correct function on it
