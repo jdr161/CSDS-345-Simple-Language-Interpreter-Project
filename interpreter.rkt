@@ -117,17 +117,17 @@
 (define M_return
   (lambda (statement state)
     (cond
-      [(not (list? statement))       (M_value statement state)] ; statement is a number, variable, 'true, or 'false
-      [(eq? (car statement) '==)     (eq? (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state))]
-      [(eq? (car statement) '!=)     (not (eq? (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)))]
-      [(eq? (car statement) '<)      (< (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state))]
-      [(eq? (car statement) '<=)     (<= (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state))]
-      [(eq? (car statement) '>)      (> (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state))]
-      [(eq? (car statement) '>=)     (>= (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state))]
-      [(eq? (car statement) '&&)     (and (M_boolean (car (cdr statement)) state) (M_boolean (car (cdr (cdr statement))) state))]
-      [(eq? (car statement) '||)     (or (M_boolean (car (cdr statement)) state) (M_boolean (car (cdr (cdr statement))) state))]
-      [(eq? (car statement) '!)      (not (M_boolean (car (cdr statement)) state))]
-      (else                          (M_value (car (cdr statement)) state)))))
+      [(not (list? statement))       (addBinding 'return (M_value statement state))] ; statement is a number, variable, 'true, or 'false
+      [(eq? (car statement) '==)     (addBinding 'return (eq? (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)))]
+      [(eq? (car statement) '!=)     (addBinding 'return (not (eq? (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state))))]
+      [(eq? (car statement) '<)      (addBinding 'return (< (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)))]
+      [(eq? (car statement) '<=)     (addBinding 'return (<= (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)))]
+      [(eq? (car statement) '>)      (addBinding 'return (> (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)))]
+      [(eq? (car statement) '>=)     (addBinding 'return (>= (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)))]
+      [(eq? (car statement) '&&)     (addBinding 'return (and (M_boolean (car (cdr statement)) state) (M_boolean (car (cdr (cdr statement))) state)))]
+      [(eq? (car statement) '||)     (addBinding 'return (or (M_boolean (car (cdr statement)) state) (M_boolean (car (cdr (cdr statement))) state)))]
+      [(eq? (car statement) '!)      (addBinding 'return (not (M_boolean (car (cdr statement)) state)))]
+      (else                          (addBinding 'return (M_value (car (cdr statement)) state))))))
 
 ; M_if takes an if statement (in the form (if conditional then-statement optional-else-statement)) and a state
 ; evaluates the conditional and calls M_state on the correct statement as necessary
@@ -161,7 +161,7 @@
 (define M_state
   (lambda (tree state)
     (cond
-      [(null? tree)                   (error "no return value")]
+      [(null? tree)                   state]
       [(eq? 'var (car (car tree)))    (M_state (cdr tree) (M_declaration (car tree) state))]
       [(eq? '= (car (car tree)))      (M_state (cdr tree) (M_assignment (car tree) state))]
       [(eq? 'return (car (car tree))) (M_return (car tree) state)]
@@ -176,7 +176,7 @@
 ; returns the return value from that syntax tree
 (define interpret
   (lambda (filename)
-    (M_state(parser filename) '())))
+    (findBinding 'return (M_state(parser filename) '((return ())))))) ; () shows returns true for (null? '())
 
 (parser "test1.txt")
 (interpret "test1.txt")
