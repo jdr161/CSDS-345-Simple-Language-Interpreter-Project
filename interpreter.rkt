@@ -38,7 +38,9 @@
       [(eq? name 'true)             #t]
       [(eq? name 'false)            #f]
       [(null? state)                (error name "variable used before declaration")]
-      [(eq? (car (car state)) name) (car (cdr (car state)))]
+      [(eq? (car (car state)) name) (if (null? (car (cdr (car state))))
+                                        (error name "cannot use variable before it is assigned a value")
+                                        (car (cdr (car state))))]
       (else                         (findBinding name (cdr state))))))
 
 ; helper function declared? finds if a given var name is in the state or not
@@ -49,6 +51,7 @@
       [(eq? (car(car state)) name) #t]
       [else (declared? name        (cdr state))])))
 
+; 
 (define operator
   (lambda (expression)
     (car expression)))
@@ -69,12 +72,24 @@
   (lambda ()
     (list (list 'return null))))
 
+; findReturnVal finds the return value to return after everything else is done
 (define findReturnVal
   (lambda (state)
     (cond
       [(eq? (findBinding 'return state) #t) 'true]
       [(eq? (findBinding 'return state) #f) 'false]
       (else (findBinding 'return state)))))
+
+; returnDefined? takes a state
+; returns #t if return has been assigned a value
+; #f otherwise
+(define returnDefined?
+  (lambda (state)
+    (cond
+      [(eq? (car (car state)) 'return) (if (null? (car (cdr (car state))))
+                                           #f
+                                           #t)]
+      (else                            (returnDefined? (cdr state))))))
  
 
 ; M_value takes an expression and a state
@@ -140,13 +155,14 @@
       (else (error "variable not declared")))))
 
 ; M_return takes a return statement (in the form (return expression)) and a state
-; evaluates the expression
+; If return is already defined, returns the state
+; otherwise, it evaluates the expression and 
 ; returns the value of the expression
 (define M_return
   (lambda (statement state)
-    (if (null? (findBinding 'return state)) 
-        (addBinding 'return (M_value (leftoperand statement) state) state)
-        state)))
+    (if (returnDefined? state)
+        state
+        (addBinding 'return (M_value (leftoperand statement) state) state))))
 
 ; M_if takes an if statement (in the form (if conditional then-statement optional-else-statement)) and a state
 ; evaluates the conditional and calls M_state on the correct statement as necessary
@@ -197,7 +213,7 @@
   (lambda (filename)
     (findReturnVal (M_state(parser filename) (newState))))) ; () shows returns true for (null? '())
 
-(parser "t22.txt")
+;(parser "t16.txt")
 (interpret "t22.txt")
 
 ;t1 runs and returns 150
