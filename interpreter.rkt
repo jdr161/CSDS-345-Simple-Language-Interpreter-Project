@@ -112,22 +112,29 @@
       (else (M_boolean expr state)))))
 
 ; M_boolean takes a conditional and a state
+; if trying to compare an int and a boolean, throws an error
 ; evaluates the conditional (including dealing with comparison operators)
 ; returns true or false
 (define M_boolean
   (lambda (conditional state)
     (cond
       [(not (list? conditional))   (findBinding conditional state)] ; the case that conditional is a variable or 'true or 'false
-      [(eq? (operator conditional) '==) (eq? (M_value (leftoperand conditional) state) (M_value (rightoperand conditional) state))]
-      [(eq? (operator conditional) '!=) (not (eq? (M_value (leftoperand conditional) state) (M_value (rightoperand conditional)  state)))]
-      [(eq? (operator conditional) '<)  (< (M_value (leftoperand conditional) state) (M_value (rightoperand conditional)  state))]
-      [(eq? (operator conditional) '<=) (<= (M_value (leftoperand conditional) state) (M_value (rightoperand conditional)  state))]
-      [(eq? (operator conditional) '>)  (> (M_value (leftoperand conditional) state) (M_value (rightoperand conditional)  state))]
-      [(eq? (operator conditional) '>=) (>= (M_value (leftoperand conditional) state) (M_value (rightoperand conditional)  state))]
+      [(and (eq? (operator conditional) '==) (and (number? (M_value (leftoperand conditional) state)) (number? (M_value (rightoperand conditional)  state))))
+                 (eq? (M_value (leftoperand conditional) state) (M_value (rightoperand conditional) state))]
+      [(and (eq? (operator conditional) '!=) (and (number? (M_value (leftoperand conditional) state)) (number? (M_value (rightoperand conditional)  state))))
+                 (not (eq? (M_value (leftoperand conditional) state) (M_value (rightoperand conditional)  state)))]
+      [(and (eq? (operator conditional) '<) (and (number? (M_value (leftoperand conditional) state)) (number? (M_value (rightoperand conditional)  state))))
+                 (< (M_value (leftoperand conditional) state) (M_value (rightoperand conditional)  state))]
+      [(and (eq? (operator conditional) '<=) (and (number? (M_value (leftoperand conditional) state)) (number? (M_value (rightoperand conditional)  state))))
+                 (<= (M_value (leftoperand conditional) state) (M_value (rightoperand conditional)  state))]
+      [(and (eq? (operator conditional) '>) (and (number? (M_value (leftoperand conditional) state)) (number? (M_value (rightoperand conditional)  state))))
+                 (> (M_value (leftoperand conditional) state) (M_value (rightoperand conditional)  state))]
+      [(and (eq? (operator conditional) '>=) (and (number? (M_value (leftoperand conditional) state)) (number? (M_value (rightoperand conditional)  state))))
+                 (>= (M_value (leftoperand conditional) state) (M_value (rightoperand conditional)  state))]
       [(eq? (operator conditional) '&&) (and (M_boolean (leftoperand conditional) state) (M_boolean (rightoperand conditional)  state))]
       [(eq? (operator conditional) '||) (or (M_boolean (leftoperand conditional) state) (M_boolean (rightoperand conditional)  state))]
       [(eq? (operator conditional) '!)  (not (M_boolean (leftoperand conditional) state))]
-      (else                        (error "unexpected conditional operator")))))
+      (else                        (error "cannot compare int and bool")))))
 
 
 ; M_declaration takes a declaration statement (in the form (var variable) or (var variable value)) and a state
@@ -137,7 +144,7 @@
 (define M_declaration
   (lambda (statement state)
     (cond
-      [(declared? (leftoperand statement) state) (error "variable name is already taken")]
+      [(declared? (leftoperand statement) state) (error (leftoperand statement) "variable name is already taken")]
       [(null? (cdr (cdr statement)))           (addBinding (leftoperand statement) null state)]
       (else                                    (addBinding (leftoperand statement) (M_value (rightoperand statement) state) state)))))
 
@@ -152,7 +159,7 @@
   (lambda (expr state)
     (cond
       [(and (eq? (operator expr) '=) (declared? (leftoperand expr) state)) (addBinding (leftoperand expr) (M_value(rightoperand expr) state) state)]
-      (else (error "variable not declared")))))
+      (else (error (leftoperand expr) "variable not declared")))))
 
 ; M_return takes a return statement (in the form (return expression)) and a state
 ; If return is already defined, returns the state
@@ -202,7 +209,7 @@
       [(eq? 'return (car (car tree))) (M_return (car tree) state)]
       [(eq? 'if (car (car tree)))     (M_state (cdr tree) (M_if (car tree) state))]
       [(eq? 'while (car (car tree)))  (M_state (cdr tree) (M_while (car tree) state))]
-      (else                           (error "unrecognized statement type")))))
+      (else                           (error (car (car tree)) "unrecognized statement type")))))
   
 
 ; interpret takes a filename
@@ -214,7 +221,18 @@
     (findReturnVal (M_state(parser filename) (newState))))) ; () shows returns true for (null? '())
 
 ;(parser "t16.txt")
+
+
+
+(interpret "t15.txt")
+(interpret "t16.txt")
+(interpret "t17.txt")
+(interpret "t18.txt")
+(interpret "t19.txt")
+(interpret "t20.txt")
+(interpret "t21.txt")
 (interpret "t22.txt")
+(interpret "t23.txt")
 
 ;t1 runs and returns 150
 ;t2 runs and returns -4 (used (round x ) to make sure we get integers
@@ -237,5 +255,6 @@
 ;t19 runs and correctly returns 128
 ;t20 runs and correctly returns 12
 ;t21 runs and correctly returns true
-;t22 runs and returns -1 WRONG
+;t22 runs and correctly returns 1
+;t23 gives correct error
   
