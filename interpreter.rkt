@@ -117,17 +117,17 @@
 (define M_return
   (lambda (statement state)
     (cond
-      [(not (list? statement))       (addBinding 'return (M_value statement state))] ; statement is a number, variable, 'true, or 'false
-      [(eq? (car statement) '==)     (addBinding 'return (eq? (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)))]
-      [(eq? (car statement) '!=)     (addBinding 'return (not (eq? (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state))))]
-      [(eq? (car statement) '<)      (addBinding 'return (< (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)))]
-      [(eq? (car statement) '<=)     (addBinding 'return (<= (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)))]
-      [(eq? (car statement) '>)      (addBinding 'return (> (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)))]
-      [(eq? (car statement) '>=)     (addBinding 'return (>= (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)))]
-      [(eq? (car statement) '&&)     (addBinding 'return (and (M_boolean (car (cdr statement)) state) (M_boolean (car (cdr (cdr statement))) state)))]
-      [(eq? (car statement) '||)     (addBinding 'return (or (M_boolean (car (cdr statement)) state) (M_boolean (car (cdr (cdr statement))) state)))]
-      [(eq? (car statement) '!)      (addBinding 'return (not (M_boolean (car (cdr statement)) state)))]
-      (else                          (addBinding 'return (M_value (car (cdr statement)) state))))))
+      [(not (list? statement))       (addBinding 'return (M_value statement state) state)] ; statement is a number, variable, 'true, or 'false
+      [(eq? (car statement) '==)     (addBinding 'return (eq? (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
+      [(eq? (car statement) '!=)     (addBinding 'return (not (eq? (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state))]
+      [(eq? (car statement) '<)      (addBinding 'return (< (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
+      [(eq? (car statement) '<=)     (addBinding 'return (<= (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
+      [(eq? (car statement) '>)      (addBinding 'return (> (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
+      [(eq? (car statement) '>=)     (addBinding 'return (>= (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
+      [(eq? (car statement) '&&)     (addBinding 'return (and (M_boolean (car (cdr statement)) state) (M_boolean (car (cdr (cdr statement))) state)) state)]
+      [(eq? (car statement) '||)     (addBinding 'return (or (M_boolean (car (cdr statement)) state) (M_boolean (car (cdr (cdr statement))) state)) state)]
+      [(eq? (car statement) '!)      (addBinding 'return (not (M_boolean (car (cdr statement)) state)) state)]
+      (else                          (addBinding 'return (M_return (car (cdr statement)) state) state)))))
 
 ; M_if takes an if statement (in the form (if conditional then-statement optional-else-statement)) and a state
 ; evaluates the conditional and calls M_state on the correct statement as necessary
@@ -137,8 +137,8 @@
   (lambda (statements state)
     (cond
       [(null? statements) state] ; i assume if passed in it is not gonna be null though
-      [(M_boolean (car (cdr statements))) (M_state (cons (car (cdr (cdr statements))) '()) state)]
-      [(null? (car (cdr (cdr (cdr statements))))) state] ;check if the else statemet is nullthen just return state as it is
+      [(M_boolean (car (cdr statements)) state) (M_state (cons (car (cdr (cdr statements))) '()) state)]
+      [(eq? (car (cdr (cdr (cdr statements)))) '()) state] ;check if the else statemet is nullthen just return state as it is
       [else (M_state (cons (car (cdr (cdr (cdr statements)))) '()) state)]))) ; return the false statement state
 
 
@@ -176,14 +176,24 @@
 ; returns the return value from that syntax tree
 (define interpret
   (lambda (filename)
-    (findBinding 'return (M_state(parser filename) '((return ())))))) ; () shows returns true for (null? '())
+    (findBinding 'return (M_state(parser filename) '())))) ; () shows returns true for (null? '())
 
-(parser "test1.txt")
-(interpret "test1.txt")
-
-
-
-
-
-
+(parser "t20.txt")
+(interpret "t20.txt")
+;t2 fails and returns 6
+;t4 fails and returns (return (/ (- (* 5 7) 3) 2)) but it is 16!
+;t5 fails and returns '((x 10) (y (+ 12 x)) (return ((x 10) (y (+ 12 x)) (return 10))))
+;t6 fails and return x which is fine because x <= y and m=x so should return  5
+;t6 still ^((x 5) (y 6) (m x) (return x))
+;t7 fails and return y which is fine because x <= y and m=y so should return  6
+;t7 still ^((x 5) (y 6) (m y) (return y))
+;t9 need to fix M_if due to  car: contract violation expected: pair? given: '()
+;t10 fails '((return ((return ((return 6))))))
+;t12 fails because result didn't give error and return '((y x) (return x))
+;t13 fails because it didn't give error and return '((x (+ x y)) (y ()) (return (+ x y)))
+;t15 fails due to contract violation expected: pair? given: 'true
+;t17 fails similar kind of error as t15
+;t18 fails similar kind of error as t17
+;t19 fails contract violation expected:real?, given: '(* x 2)
+;t20 fails due to contract violation expected: number? given '(- x 1)
   
