@@ -9,9 +9,6 @@
 (define addBinding
   (lambda (name val state)
     (cond
-      [(boolean? val) (if val
-                          (cons state (list (list name #t)))
-                          (cons state (list (list name #f))))]
       [(eq? val 'true)              (addBinding name #t state)]
       [(eq? val 'false)             (addBinding name #f state)]
       [(null? state)                (list(list name val))]
@@ -42,7 +39,7 @@
       [(eq? name 'false)            #f]
       [(null? state)                (error name "variable used before declaration")]
       [(eq? (car (car state)) name) (if (null? (car (cdr (car state))))
-                                        (error "cannot use variable before it is assigned a value")
+                                        (error name "cannot use variable before it is assigned a value")
                                         (car (cdr (car state))))]
       (else                         (findBinding name (cdr state))))))
 
@@ -211,8 +208,8 @@
   (lambda (filename)
     (findReturnVal (M_state(parser filename) (newState))))) ; () shows returns true for (null? '())
 
-(parser "t15.txt")
-(interpret "t15.txt")
+(parser "t17.txt")
+(interpret "t17.txt")
 
 ;t1 runs and returns 150
 ;t2 runs and returns -4 (used (round x ) to make sure we get integers
