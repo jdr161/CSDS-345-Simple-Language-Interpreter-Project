@@ -35,8 +35,8 @@
 (define findBinding
   (lambda (name state)
     (cond
-      [(eq? name 'true)             #t]
-      [(eq? name 'false)            #f]
+      [(eq? name 'true)             'true]
+      [(eq? name 'false)            'false]
       [(null? state)                (error name "variable used before declaration")]
       [(eq? (car (car state)) name) (if (null? (car (cdr (car state))))
                                         (error "cannot use variable before it is assigned a value")
@@ -62,12 +62,12 @@
       [(not (list? expr)) (if (number? expr) ; if the expression is just a single number or variable
                               expr
                               (findBinding expr state))]
-      [(eq? (car expr) '+) (+ (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state))]
+      [(eq? (car expr) '+) (round (+ (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state)))]
       [(eq? (car expr) '-) (if (null? (cdr (cdr expr))) ; if the '- is a unary operator
-                               (- (M_value (car (cdr expr)) state))
-                               (- (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state)))] 
-      [(eq? (car expr) '*) (* (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state))]
-      [(eq? (car expr) '/) (/ (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state))]
+                               (round (- (M_value (car (cdr expr)) state)))
+                               (round (- (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state))))] 
+      [(eq? (car expr) '*) (round (* (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state)))]
+      [(eq? (car expr) '/) (round (/ (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state)))]
       [(eq? (car expr) '%) (modulo (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state))]
       (else (M_boolean expr state)))))
 
@@ -119,18 +119,18 @@
 ; returns the value of the expression
 (define M_return
   (lambda (statement state)
-    (cond
-      [(not (list? (car (cdr statement))))   (addBinding 'return (M_value (car (cdr statement)) state) state)] ; statement is a number, variable, 'true, or 'false
-      [(eq? (car (car (cdr statement))) '==) (addBinding 'return (eq? (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)] ; statement is a boolean expression
-      [(eq? (car (car (cdr statement))) '!=) (addBinding 'return (not (eq? (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state))]
-      [(eq? (car (car (cdr statement))) '<)  (addBinding 'return (< (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
-      [(eq? (car (car (cdr statement))) '<=) (addBinding 'return (<= (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
-      [(eq? (car (car (cdr statement))) '>)  (addBinding 'return (> (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
-      [(eq? (car (car (cdr statement))) '>=) (addBinding 'return (>= (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
-      [(eq? (car (car (cdr statement))) '&&) (addBinding 'return (and (M_boolean (car (cdr statement)) state) (M_boolean (car (cdr (cdr statement))) state)) state)]
-      [(eq? (car (car (cdr statement))) '||) (addBinding 'return (or (M_boolean (car (cdr statement)) state) (M_boolean (car (cdr (cdr statement))) state)) state)]
-      [(eq? (car (car (cdr statement))) '!)  (addBinding 'return (not (M_boolean (car (cdr statement)) state)) state)]
-      (else                                  (addBinding 'return (M_value (car (cdr statement)) state) state))))) ; statement is a value expression
+      (addBinding 'return (M_value (car (cdr statement)) state) state)))
+     ; [(not (list? (car (cdr statement))))   (addBinding 'return (M_value (car (cdr statement)) state) state)] ; statement is a number, variable, 'true, or 'false
+ ;     [(eq? (car (car (cdr statement))) '==) (addBinding 'return (eq? (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)] ; statement is a boolean expression
+     ; [(eq? (car (car (cdr statement))) '!=) (addBinding 'return (not (eq? (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state))]
+     ; [(eq? (car (car (cdr statement))) '<)  (addBinding 'return (< (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
+     ; [(eq? (car (car (cdr statement))) '<=) (addBinding 'return (<= (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
+     ; [(eq? (car (car (cdr statement))) '>)  (addBinding 'return (> (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
+    ;  [(eq? (car (car (cdr statement))) '>=) (addBinding 'return (>= (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
+     ; [(eq? (car (car (cdr statement))) '&&) (addBinding 'return (and (M_boolean (car (cdr statement)) state) (M_boolean (car (cdr (cdr statement))) state)) state)]
+     ; [(eq? (car (car (cdr statement))) '||) (addBinding 'return (or (M_boolean (car (cdr statement)) state) (M_boolean (car (cdr (cdr statement))) state)) state)]
+     ; [(eq? (car (car (cdr statement))) '!)  (addBinding 'return (not (M_boolean (car (cdr statement)) state)) state)]
+    ;  (else                                  (addBinding 'return (M_value (car (cdr statement)) state) state))))) ; statement is a value expression
 
 ; M_if takes an if statement (in the form (if conditional then-statement optional-else-statement)) and a state
 ; evaluates the conditional and calls M_state on the correct statement as necessary
@@ -181,11 +181,11 @@
   (lambda (filename)
     (findBinding 'return (M_state(parser filename) '((return ())))))) ; () shows returns true for (null? '())
 
-(parser "t21.txt")
-(interpret "t21.txt")
+(parser "t15.txt")
+(interpret "t15.txt")
 
 ;t1 runs and returns 150
-;t2 runs and returns -3 (6/11) (INCORRECT BECAUSE CORRECT is -4)
+;t2 runs and returns -4 (used (round x ) to make sure we get integers
 ;t3 runs and returns 10
 ;t4 runs and returns 16
 ;t5 runs and returns 220
@@ -201,7 +201,7 @@
 ;t15 runs and returns #t (INCORRECT NEED TO RETURN true)
 ;t16 runs and returns 100
 ;t17 runs and returns #f (INCORRECT NEED TO RETURN false)
-;t18 runs and returns #t (INCCORECT NEED TO RETURN #t)
+;t18 runs and returns #t (INCCORECT NEED TO RETURN true)
 ;t19 runs and correctly returns 128
 ;t20 runs and correctly returns 12
 
