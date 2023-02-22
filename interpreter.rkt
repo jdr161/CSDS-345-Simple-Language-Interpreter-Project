@@ -38,9 +38,7 @@
       [(eq? name 'true)             #t]
       [(eq? name 'false)            #f]
       [(null? state)                (error name "variable used before declaration")]
-      [(eq? (car (car state)) name) (if (null? (car (cdr (car state))))
-                                        (error name "cannot use variable before it is assigned a value")
-                                        (car (cdr (car state))))]
+      [(eq? (car (car state)) name) (car (cdr (car state)))]
       (else                         (findBinding name (cdr state))))))
 
 ; helper function declared? finds if a given var name is in the state or not
@@ -146,18 +144,9 @@
 ; returns the value of the expression
 (define M_return
   (lambda (statement state)
-      (addBinding 'return (M_value (leftoperand statement) state) state)))
-     ; [(not (list? (car (cdr statement))))   (addBinding 'return (M_value (car (cdr statement)) state) state)] ; statement is a number, variable, 'true, or 'false
- ;     [(eq? (car (car (cdr statement))) '==) (addBinding 'return (eq? (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)] ; statement is a boolean expression
-     ; [(eq? (car (car (cdr statement))) '!=) (addBinding 'return (not (eq? (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state))]
-     ; [(eq? (car (car (cdr statement))) '<)  (addBinding 'return (< (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
-     ; [(eq? (car (car (cdr statement))) '<=) (addBinding 'return (<= (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
-     ; [(eq? (car (car (cdr statement))) '>)  (addBinding 'return (> (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
-    ;  [(eq? (car (car (cdr statement))) '>=) (addBinding 'return (>= (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
-     ; [(eq? (car (car (cdr statement))) '&&) (addBinding 'return (and (M_boolean (car (cdr statement)) state) (M_boolean (car (cdr (cdr statement))) state)) state)]
-     ; [(eq? (car (car (cdr statement))) '||) (addBinding 'return (or (M_boolean (car (cdr statement)) state) (M_boolean (car (cdr (cdr statement))) state)) state)]
-     ; [(eq? (car (car (cdr statement))) '!)  (addBinding 'return (not (M_boolean (car (cdr statement)) state)) state)]
-    ;  (else                                  (addBinding 'return (M_value (car (cdr statement)) state) state))))) ; statement is a value expression
+    (if (null? (findBinding 'return state)) 
+        (addBinding 'return (M_value (leftoperand statement) state) state)
+        state)))
 
 ; M_if takes an if statement (in the form (if conditional then-statement optional-else-statement)) and a state
 ; evaluates the conditional and calls M_state on the correct statement as necessary
@@ -208,8 +197,8 @@
   (lambda (filename)
     (findReturnVal (M_state(parser filename) (newState))))) ; () shows returns true for (null? '())
 
-(parser "t17.txt")
-(interpret "t17.txt")
+(parser "t22.txt")
+(interpret "t22.txt")
 
 ;t1 runs and returns 150
 ;t2 runs and returns -4 (used (round x ) to make sure we get integers
@@ -225,12 +214,12 @@
 ;t12 gives correct error
 ;t13 gives correct error
 ;t14 gives correct error
-;t15 runs and returns #t (INCORRECT NEED TO RETURN true)
+;t15 runs and correctly returns true
 ;t16 runs and returns 100
-;t17 runs and returns #f (INCORRECT NEED TO RETURN false)
-;t18 runs and returns #f (INCORRECT NEED TO RETURN true)
+;t17 runs and correctly returns false
+;t18 runs and correctly returns true
 ;t19 runs and correctly returns 128
 ;t20 runs and correctly returns 12
-
-;t22 runs and returns 1
+;t21 runs and correctly returns true
+;t22 runs and returns -1 WRONG
   
