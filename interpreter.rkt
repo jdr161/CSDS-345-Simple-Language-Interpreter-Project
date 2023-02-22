@@ -108,8 +108,8 @@
 (define M_assignment
   (lambda (expr state)
     (cond
-    [(and (eq? (car expr) '=) (declared? (car(cdr expr)) state)) (addBinding (car (cdr expr)) (car(cdr(cdr expr))) state)]
-    [else state])))
+      [(and (eq? (car expr) '=) (declared? (car(cdr expr)) state)) (addBinding (car (cdr expr)) (M_value(car (cdr (cdr expr))) state) state)]
+      (else (error "variable not declared")))))
 
 ; M_return takes a return statement (in the form (return expression)) and a state
 ; evaluates the expression
