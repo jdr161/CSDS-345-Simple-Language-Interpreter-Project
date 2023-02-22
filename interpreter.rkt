@@ -64,10 +64,16 @@
 (define rightoperand caddr)
 ;caddr is (car (cdr (cdr expr)))
 
+; fourthoperand takes 
+(define fourthoperand
+  (lambda (expr)
+    (car (cdr (cdr (cdr expr))))))
+
 ; newState returns a blank state, ready to pass into M_state
 (define newState
   (lambda ()
     (list (list 'return null))))
+ 
 
 ; M_value takes an expression and a state
 ; evaluates the expression
@@ -198,8 +204,8 @@
   (lambda (filename)
     (findBinding 'return (M_state(parser filename) (newState))))) ; () shows returns true for (null? '())
 
-(parser "t18.txt")
-(interpret "t18.txt")
+(parser "t15.txt")
+(interpret "t15.txt")
 
 ;t1 runs and returns 150
 ;t2 runs and returns -4 (used (round x ) to make sure we get integers
