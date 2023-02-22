@@ -9,6 +9,9 @@
 (define addBinding
   (lambda (name val state)
     (cond
+      [(boolean? val) (if val
+                          (cons state (list (list name #t)))
+                          (cons state (list (list name #f))))]
       [(eq? val 'true)              (addBinding name #t state)]
       [(eq? val 'false)             (addBinding name #f state)]
       [(null? state)                (list(list name val))]
@@ -35,8 +38,8 @@
 (define findBinding
   (lambda (name state)
     (cond
-      [(eq? name 'true)             'true]
-      [(eq? name 'false)            'false]
+      [(eq? name 'true)             #t]
+      [(eq? name 'false)            #f]
       [(null? state)                (error name "variable used before declaration")]
       [(eq? (car (car state)) name) (if (null? (car (cdr (car state))))
                                         (error "cannot use variable before it is assigned a value")
@@ -61,11 +64,15 @@
 (define rightoperand caddr)
 ;caddr is (car (cdr (cdr expr)))
 
+; newState returns a blank state, ready to pass into M_state
+(define newState
+  (lambda ()
+    (list (list 'return null))))
+
 ; M_value takes an expression and a state
 ; evaluates the expression
 ; expressions can be a number, a variable, or an operator with two subexpressions
 ; returns the value of the expression
-
 (define M_value
   (lambda (expr state)
     (cond
@@ -152,7 +159,7 @@
       [(null? statements) state] ; i assume if passed in it is not gonna be null though
       [(M_boolean (leftoperand statements) state) (M_state (cons (rightoperand statements) '()) state)]
       [(eq? (cdr (cdr (cdr statements))) '())   state] ; check if the else statemet is null then just return state as it is
-      [else                                     (M_state (cons (rightoperand statements) '()) state)]))) ; return the false statement state
+      [else                                     (M_state (cons (fourthoperand statements) '()) state)]))) ; return the false statement state
 
 
 ; M_while takes a while statement (in the form 	(while conditional body-statement)) and a state
@@ -189,7 +196,7 @@
 ; returns the return value from that syntax tree
 (define interpret
   (lambda (filename)
-    (findBinding 'return (M_state(parser filename) (list (list 'return null)))))) ; () shows returns true for (null? '())
+    (findBinding 'return (M_state(parser filename) (newState))))) ; () shows returns true for (null? '())
 
 (parser "t18.txt")
 (interpret "t18.txt")
