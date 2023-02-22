@@ -38,7 +38,9 @@
       [(eq? name 'true) #t]
       [(eq? name 'false) #f]
       [(null? state) (error name "variable used before declaration")]
-      [(eq? (car (car state)) name) (car (cdr (car state)))]
+      [(eq? (car (car state)) name) (if (null? (car (cdr (car state))))
+                                        (error "cannot use variable before it is assigned a value")
+                                        (car (cdr (car state))))]
       (else (findBinding name (cdr state))))))
 
 ; helper function declared? finds if a given var name is in the state or not
@@ -76,16 +78,16 @@
 (define M_boolean
   (lambda (conditional state)
     (cond
-      ((boolean? (car conditional))    (car conditional))
-      ((eq? (car conditional) '==)     (eq? (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state)))
-      ((eq? (car conditional) '!=)     (not (eq? (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state))))
-      ((eq? (car conditional) '<)      (< (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state)))
-      ((eq? (car conditional) '<=)     (<= (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state)))
-      ((eq? (car conditional) '>)      (> (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state)))
-      ((eq? (car conditional) '>=)     (>= (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state)))
-      ((eq? (car conditional) '&&)     (and (M_boolean (car (cdr conditional)) state) (M_boolean (car (cdr (cdr conditional))) state)))
-      ((eq? (car conditional) '||)     (or (M_boolean (car (cdr conditional)) state) (M_boolean (car (cdr (cdr conditional))) state)))
-      ((eq? (car conditional) '!)      (not (M_boolean (car (cdr conditional)) state)))
+      [(not (list? conditional))       (findBinding conditional state)] ; the case that conditional is a variable or 'true or 'false
+      [(eq? (car conditional) '==)     (eq? (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state))]
+      [(eq? (car conditional) '!=)     (not (eq? (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state)))]
+      [(eq? (car conditional) '<)      (< (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state))]
+      [(eq? (car conditional) '<=)     (<= (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state))]
+      [(eq? (car conditional) '>)      (> (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state))]
+      [(eq? (car conditional) '>=)     (>= (M_value (car (cdr conditional)) state) (M_value (car (cdr (cdr conditional))) state))]
+      [(eq? (car conditional) '&&)     (and (M_boolean (car (cdr conditional)) state) (M_boolean (car (cdr (cdr conditional))) state))]
+      [(eq? (car conditional) '||)     (or (M_boolean (car (cdr conditional)) state) (M_boolean (car (cdr (cdr conditional))) state))]
+      [(eq? (car conditional) '!)      (not (M_boolean (car (cdr conditional)) state))]
       (else (error "unexpected conditional operator")))))
 
 
@@ -120,15 +122,15 @@
   (lambda (statement state)
     (cond
       [(not (list? (car (cdr statement))))       (addBinding 'return (M_value (car (cdr statement)) state) state)] ; statement is a number, variable, 'true, or 'false
-      [(eq? (car statement) '==)     (addBinding 'return (eq? (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)] ; statement is a boolean expression
-      [(eq? (car statement) '!=)     (addBinding 'return (not (eq? (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state))]
-      [(eq? (car statement) '<)      (addBinding 'return (< (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
-      [(eq? (car statement) '<=)     (addBinding 'return (<= (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
-      [(eq? (car statement) '>)      (addBinding 'return (> (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
-      [(eq? (car statement) '>=)     (addBinding 'return (>= (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
-      [(eq? (car statement) '&&)     (addBinding 'return (and (M_boolean (car (cdr statement)) state) (M_boolean (car (cdr (cdr statement))) state)) state)]
-      [(eq? (car statement) '||)     (addBinding 'return (or (M_boolean (car (cdr statement)) state) (M_boolean (car (cdr (cdr statement))) state)) state)]
-      [(eq? (car statement) '!)      (addBinding 'return (not (M_boolean (car (cdr statement)) state)) state)]
+      [(eq? (car (car (cdr statement))) '==)     (addBinding 'return (eq? (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)] ; statement is a boolean expression
+      [(eq? (car (car (cdr statement))) '!=)     (addBinding 'return (not (eq? (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state))]
+      [(eq? (car (car (cdr statement))) '<)      (addBinding 'return (< (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
+      [(eq? (car (car (cdr statement))) '<=)     (addBinding 'return (<= (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
+      [(eq? (car (car (cdr statement))) '>)      (addBinding 'return (> (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
+      [(eq? (car (car (cdr statement))) '>=)     (addBinding 'return (>= (M_value (car (cdr statement)) state) (M_value (car (cdr (cdr statement))) state)) state)]
+      [(eq? (car (car (cdr statement))) '&&)     (addBinding 'return (and (M_boolean (car (cdr statement)) state) (M_boolean (car (cdr (cdr statement))) state)) state)]
+      [(eq? (car (car (cdr statement))) '||)     (addBinding 'return (or (M_boolean (car (cdr statement)) state) (M_boolean (car (cdr (cdr statement))) state)) state)]
+      [(eq? (car (car (cdr statement))) '!)      (addBinding 'return (not (M_boolean (car (cdr statement)) state)) state)]
       (else                          (addBinding 'return (M_value (car (cdr statement)) state) state))))) ; statement is a value expression
 
 ; M_if takes an if statement (in the form (if conditional then-statement optional-else-statement)) and a state
@@ -180,8 +182,8 @@
   (lambda (filename)
     (findBinding 'return (M_state(parser filename) '((return ())))))) ; () shows returns true for (null? '())
 
-(parser "t13.txt")
-(interpret "t13.txt")
+(parser "t17.txt")
+(interpret "t17.txt")
 ;t1 runs and returns 150
 ;t2 runs and returns -3 (6/11)
 ;t3 runs and returns 10
@@ -193,11 +195,12 @@
 ;t10 runs and returns -39
 ;t11 gives correct error
 ;t12 gives correct error
-;t13 fails-> no check for null return from findBinding
+;t13 gives correct error
 ;t14 gives correct error
-
-;t15 fails due to contract violation expected: pair? given: 'true
+;t15 runs and returns true
+;t16 runs and returns 100
 ;t17 fails similar kind of error as t15
+
 ;t18 fails similar kind of error as t17
 ;t19 fails contract violation expected:real?, given: '(* x 2)
 ;t20 fails due to contract violation expected: number? given '(- x 1)
