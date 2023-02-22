@@ -181,8 +181,8 @@
   (lambda (filename)
     (findBinding 'return (M_state(parser filename) '((return ())))))) ; () shows returns true for (null? '())
 
-(parser "t22.txt")
-(interpret "t22.txt")
+(parser "t17.txt")
+(interpret "t17.txt")
 ;t1 runs and returns 150
 ;t2 runs and returns -3 (6/11)
 ;t3 runs and returns 10
@@ -198,7 +198,7 @@
 ;t14 gives correct error
 ;t15 runs and returns true
 ;t16 runs and returns 100
-;t17 fails similar kind of error as t15
+;t17 M_assignment needs to check whether assigning a boolean or value like return does
 
 ;t18 fails similar kind of error as t17
 ;t19 fails contract violation expected:real?, given: '(* x 2)
