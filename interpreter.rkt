@@ -181,8 +181,8 @@
   (lambda (filename)
     (findBinding 'return (M_state(parser filename) '((return ())))))) ; () shows returns true for (null? '())
 
-(parser "t17.txt")
-(interpret "t17.txt")
+(parser "t22.txt")
+(interpret "t22.txt")
 ;t1 runs and returns 150
 ;t2 runs and returns -3 (6/11)
 ;t3 runs and returns 10
@@ -203,4 +203,6 @@
 ;t18 fails similar kind of error as t17
 ;t19 fails contract violation expected:real?, given: '(* x 2)
 ;t20 fails due to contract violation expected: number? given '(- x 1)
+
+;t22 runs and returns 1
   
