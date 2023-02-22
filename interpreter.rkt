@@ -73,6 +73,13 @@
 (define newState
   (lambda ()
     (list (list 'return null))))
+
+(define findReturnVal
+  (lambda (state)
+    (cond
+      [(eq? (findBinding 'return state) #t) 'true]
+      [(eq? (findBinding 'return state) #f) 'false]
+      (else (findBinding 'return state)))))
  
 
 ; M_value takes an expression and a state
@@ -202,7 +209,7 @@
 ; returns the return value from that syntax tree
 (define interpret
   (lambda (filename)
-    (findBinding 'return (M_state(parser filename) (newState))))) ; () shows returns true for (null? '())
+    (findReturnVal (M_state(parser filename) (newState))))) ; () shows returns true for (null? '())
 
 (parser "t15.txt")
 (interpret "t15.txt")
