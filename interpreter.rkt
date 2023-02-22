@@ -69,7 +69,7 @@
       [(eq? (car expr) '*) (* (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state))]
       [(eq? (car expr) '/) (/ (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state))]
       [(eq? (car expr) '%) (modulo (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state))]
-      (else (error "unexpected operator")))))
+      (else (M_boolean expr state)))))
 
 ; M_boolean takes a conditional and a state
 ; evaluates the conditional (including dealing with comparison operators)
@@ -181,28 +181,29 @@
   (lambda (filename)
     (findBinding 'return (M_state(parser filename) '((return ())))))) ; () shows returns true for (null? '())
 
-(parser "t17.txt")
-(interpret "t17.txt")
+(parser "t21.txt")
+(interpret "t21.txt")
+
 ;t1 runs and returns 150
-;t2 runs and returns -3 (6/11)
+;t2 runs and returns -3 (6/11) (INCORRECT BECAUSE CORRECT is -4)
 ;t3 runs and returns 10
 ;t4 runs and returns 16
 ;t5 runs and returns 220
 ;t6 runs and returns 5
 ;t7 runs and returns 6
-;t9 runs are returns 5
+;t8 runs and returns 10
+;t9 runs are returns 5 
 ;t10 runs and returns -39
 ;t11 gives correct error
 ;t12 gives correct error
 ;t13 gives correct error
 ;t14 gives correct error
-;t15 runs and returns true
+;t15 runs and returns #t (INCORRECT NEED TO RETURN true)
 ;t16 runs and returns 100
-;t17 M_assignment needs to check whether assigning a boolean or value like return does
-
-;t18 fails similar kind of error as t17
-;t19 fails contract violation expected:real?, given: '(* x 2)
-;t20 fails due to contract violation expected: number? given '(- x 1)
+;t17 runs and returns #f (INCORRECT NEED TO RETURN false)
+;t18 runs and returns #t (INCCORECT NEED TO RETURN #t)
+;t19 runs and correctly returns 128
+;t20 runs and correctly returns 12
 
 ;t22 runs and returns 1
   
