@@ -62,13 +62,13 @@
       [(not (list? expr)) (if (number? expr) ; if the expression is just a single number or variable
                               expr
                               (findBinding expr state))]
-      [(eq? (car expr) '+) (round (+ (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state)))]
+      [(eq? (car expr) '+) (+ (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state))]
       [(eq? (car expr) '-) (if (null? (cdr (cdr expr))) ; if the '- is a unary operator
-                               (round (- (M_value (car (cdr expr)) state)))
-                               (round (- (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state))))] 
-      [(eq? (car expr) '*) (round (* (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state)))]
-      [(eq? (car expr) '/) (round (/ (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state)))]
-      [(eq? (car expr) '%) (modulo (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state))]
+                               (- (M_value (car (cdr expr)) state))
+                               (- (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state)))] 
+      [(eq? (car expr) '*) (* (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state))]
+      [(eq? (car expr) '/) (quotient (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state))]
+      [(eq? (car expr) '%) (remainder (M_value (car (cdr expr)) state) (M_value (car (cdr (cdr expr))) state))]
       (else (M_boolean expr state)))))
 
 ; M_boolean takes a conditional and a state
@@ -181,8 +181,8 @@
   (lambda (filename)
     (findBinding 'return (M_state(parser filename) '((return ())))))) ; () shows returns true for (null? '())
 
-(parser "t15.txt")
-(interpret "t15.txt")
+(parser "t2.txt")
+(interpret "t2.txt")
 
 ;t1 runs and returns 150
 ;t2 runs and returns -4 (used (round x ) to make sure we get integers
