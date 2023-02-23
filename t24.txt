@@ -1,0 +1,5 @@
+var x = 200%5+100/5;
+var y = x + 60;
+if (y != x)
+	return y + x;
+return (y + x) / x;
