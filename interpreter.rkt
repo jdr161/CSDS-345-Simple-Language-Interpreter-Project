@@ -63,11 +63,11 @@
 
 
 ; fourthoperand takes the expression expr
-; returns the (car (cdr (cdr (cdr expr))))
+; returns the (cdr (cdr (cdr expr)))
 ; which is the fourth operand in a list that is the expr
 (define fourthoperand
   (lambda (expr)
-    (car (cdr (cdr (cdr expr))))))
+       (cdr (cdr (cdr expr)))))
 
 ; newState returns a blank state, ready to pass into M_state
 (define newState
@@ -177,8 +177,8 @@
     (cond
       [(null? statements) state] ; i assume if passed in it is not gonna be null though
       [(M_boolean (leftoperand statements) state) (M_state (cons (rightoperand statements) '()) state)] ;if conditional is true, we execute thenstatement and update the state
-      [(null? (fourthoperand statements))    state] ; check if the else statemet is null then just return state as it is
-      [else                                     (M_state (cons (fourthoperand statements) '()) state)]))) ; return the else statement state if there exist else 
+      [(null? (fourthoperand statements))    state] ; check if the else statement is null then just return state as it is
+      [else                                     (M_state (fourthoperand statements) state)]))) ; return the else statement state if there exist else 
 
 
 ; M_while takes a while statement (in the form 	(while conditional body-statement)) and a state
@@ -216,16 +216,17 @@
     (findReturnVal (M_state(parser filename) (newState))))) ; () shows returns true for (null? '())
 
 
-(interpret "t15.txt")
-(interpret "t16.txt")
-(interpret "t17.txt")
-(interpret "t18.txt")
-(interpret "t19.txt")
-(interpret "t20.txt")
-(interpret "t21.txt")
-(interpret "t22.txt")
-;(interpret "t23.txt")
 (interpret "t24.txt")
+;(interpret "t15.txt")
+;(interpret "t16.txt")
+;(interpret "t17.txt")
+;(interpret "t18.txt")
+;(interpret "t19.txt")
+;(interpret "t20.txt")
+;(interpret "t21.txt")
+;(interpret "t22.txt")
+;(interpret "t23.txt")
+;(interpret "t24.txt")
 
 ;t1 runs and returns 150
 ;t2 runs and returns -4 (used (round x ) to make sure we get integers
