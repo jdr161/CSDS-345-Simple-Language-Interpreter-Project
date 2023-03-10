@@ -1,0 +1,9 @@
+1. Code blocks { }
+2. goto types: break, continue, (true) return, throw e;
+3. Change return from a variable to a function?
+4. State must be a list of layers
+5. Binding pairs from ((var value) (var value)) pairs to ((list of vars) (list of values))
+I recommend either a list of binding pairs (for example: ((x 5) (y 12) ...) ), 
+or two lists, one with the variables and one with the values (for example: ((x y ...) (5 12 ...))).
+6. RECOMMENDED: Handle functions with side effect using box
+7. Read rubric
