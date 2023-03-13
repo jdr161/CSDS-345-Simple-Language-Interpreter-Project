@@ -30,7 +30,7 @@
       [(eq? name 'false)            #f]
       [(null? state)                (error name "variable used before declaration")]
       [(eq? (car (car state)) name) (if (null? (car (cdr (car state))))
-                                        (error name "cannot use variable before it is assigned a value")
+                                        (error name "cannot use variable before it is assigned a value/this will not return anything") 
                                         (car (cdr (car state))))]
       (else                         (findBinding name (cdr state))))))
 
@@ -136,6 +136,9 @@
       [(eq? (operator conditional) '&&)                      (and (M_boolean (leftoperand conditional) state) (M_boolean (rightoperand conditional)  state))]
       [(eq? (operator conditional) '||)                      (or (M_boolean (leftoperand conditional) state) (M_boolean (rightoperand conditional)  state))]
       [(eq? (operator conditional) '!)                       (not (M_boolean (leftoperand conditional) state))]
+      [(eq? (operator conditional) '==)  (eq? (M_value (leftoperand conditional) state) (M_value (rightoperand conditional) state))] ;fixed the if (true == true) return true case
+      [(eq? (operator conditional) '!=)   (not (eq? (M_value (leftoperand conditional) state) (M_value (rightoperand conditional)  state)))] ;similar case as above case resolved
+      [(number? (M_value conditional state))   (error "int in if cond")] ; expected error for int in if cond
       (else                                      (error "cannot compare int and bool")))))
 
 
@@ -215,8 +218,22 @@
   (lambda (filename)
     (findReturnVal (M_state(parser filename) (newState))))) ; () shows returns true for (null? '())
 
-
-(interpret "t24.txt")
+;(parser "fix1test.txt")
+;(interpret "fix1test.txt")
+;(interpret "t1.txt")
+;(interpret "t2.txt")
+;(interpret "t3.txt")
+;(interpret "t4.txt")
+;(interpret "t5.txt")
+;(interpret "t6.txt")
+;(interpret "t7.txt")
+;(interpret "t8.txt")
+;(interpret "t9.txt")
+;(interpret "t10.txt")
+;(interpret "t11.txt")
+;(interpret "t12.txt")
+;(interpret "t13.txt")
+;(interpret "t14.txt")
 ;(interpret "t15.txt")
 ;(interpret "t16.txt")
 ;(interpret "t17.txt")
