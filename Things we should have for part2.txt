@@ -1,9 +1,17 @@
-1. Code blocks { }
-2. goto types: break, continue, (true) return, throw e;
+1. Code blocks { } (M_block) (Maria and Wendy)
+2. goto types: break, continue, (true) return, throw e; (continuation functions for all four) (James)
+implement break for while loop 
+return function for creating M_state
+(for each of those type, can make interpreter tail recursive where only M_state function must be tail recursive, but will need M_value, M_integer and 
+M_boolean functions tail recursive in part 3) or can use call/cc
 3. Change return from a variable to a function?
-4. State must be a list of layers
-5. Binding pairs from ((var value) (var value)) pairs to ((list of vars) (list of values))
+4. State must be a list of layers (inside M_state) (Layers)
+(top of layer here ----> work down) = state
+5.M_state must be tail recursive using CPS (Maria)
+
+6. Binding pairs from ((var value) (var value)) pairs to ((list of vars) (list of values))
 I recommend either a list of binding pairs (for example: ((x 5) (y 12) ...) ), 
 or two lists, one with the variables and one with the values (for example: ((x y ...) (5 12 ...))).
-6. RECOMMENDED: Handle functions with side effect using box
-7. Read rubric
+7. RECOMMENDED: Handle functions with side effect using box
+
+8. Read rubric
