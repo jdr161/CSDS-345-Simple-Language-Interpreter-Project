@@ -227,6 +227,8 @@
       [(eq? 'while (getFirstStatementType tree))  (M_state (getRestOfStatements tree) (M_while (getFirstStatement tree) state return break continue throw) return break continue throw)]
       [(eq? 'break (getFirstStatementType tree))  (break state)]
       [(eq? 'throw (getFirstStatementType tree))  (M_state (getRestOfStatements tree) (M_throw (getFirstStatement tree) state throw) return break continue throw)]
+      [(eq? 'try (getFirstStatementType tree))    (M_state (getRestOfStatements tree) (M_try (getFirstStatement tree) state return break continue throw) return break continue throw)]
+      [(eq? 'begin (getFirstStatementType tree))  (M_state (getRestOfStatements tree) (M_block (getFirstStatement tree) state return break continue throw) return break continue throw)]
       (else                           (error (getFirstStatementType tree) "unrecognized statement type")))))
   
 
