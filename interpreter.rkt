@@ -215,7 +215,7 @@
                                                                                    (lambda (contState) (break (M_while cstatements contState return throw))) ; continue skips everything else in an iteration and directly begins the next iteration
                                                                                    throw))] ; throw stays the same
         ;while the condition is true, we will continue running the body statement and update the state using M_while
-        (else                                         state)))) ;if returned false then just return the state
+        (else                                         state)))))) ;if returned false then just return the state
 
 ; M_state takes a syntax tree and a state
 ; checks what kind of statement the first statement in the syntax tree is and calls the correct function on it
