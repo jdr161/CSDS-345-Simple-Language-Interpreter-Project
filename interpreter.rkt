@@ -90,7 +90,11 @@
 ; newState returns a blank state, ready to pass into M_state
 (define newState
   (lambda ()
-    (list (list 'return null))))
+    (list (list))))
+;((return ()))
+;(())
+;'(((x 10)))
+;(((x 10) (y 20)))
 
 ; findReturnVal finds the return value to return after everything else is done
 (define findReturnVal
@@ -224,11 +228,13 @@
 (define removeLayer
   (lambda (state)
     (cdr state)))
-(
+(define addLayer
+  (lambda (state)
+    (cons '() state)))
 ;remove the top most la
 (define M_block
   (lambda (stmt state return break continue throw)
-    (removeLayer (M_state stmt (addLayer state) return continue throw))))
+    (removeLayer (M_state stmt (addLayer state) return break continue throw))))
 
 (define M_state
   (lambda (tree state return break continue throw)
@@ -240,8 +246,8 @@
       [(eq? 'if (getFirstStatementType tree))      (M_state (getRestOfStatements tree) (M_if (getFirstStatement tree) state return break continue throw) return break continue throw)]
       [(eq? 'while (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_while (getFirstStatement tree) state return throw) return break continue throw)]
       [(eq? 'break (getFirstStatementType tree))   (break state)]
-      [(eq? 'throw (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_throw (getFirstStatement tree) state throw) return break continue throw)]
-      [(eq? 'try (getFirstStatementType tree))     (M_state (getRestOfStatements tree) (M_try (getFirstStatement tree) state return break continue throw) return break continue throw)]
+      ;[(eq? 'throw (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_throw (getFirstStatement tree) state throw) return break continue throw)]
+      ;[(eq? 'try (getFirstStatementType tree))     (M_state (getRestOfStatements tree) (M_try (getFirstStatement tree) state return break continue throw) return break continue throw)]
       [(eq? 'begin (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_block (getFirstStatement tree) state return break continue throw) return break continue throw)]
       [(eq? 'continue (getFirstStatementType tree))(continue state)]
       (else                           (error (getFirstStatementType tree) "unrecognized statement type")))))
@@ -253,11 +259,10 @@
 ; returns the return value from that syntax tree
 (define interpret
   (lambda (filename)
-    (findReturnVal (call/cc (lambda (return) (M_state(parser filename) (newState) return (error "continue used outside of while loop") (error "throw used outside of catch statement"))))))) ; () shows returns true for (null? '())
+    (findReturnVal (call/cc (lambda (return) (M_state(parser filename) (newState) return (lambda (v) error) (lambda (v) error) (lambda (v1) error))))))) ; () shows returns true for (null? '())
 
-;(parser "fix1test.txt")
-;(interpret "fix1test.txt")
-;(interpret "t1.txt")
+(parser "test1.txt")
+(interpret "test1.txt")
 ;(interpret "t2.txt")
 ;(interpret "t3.txt")
 ;(interpret "t4.txt")
