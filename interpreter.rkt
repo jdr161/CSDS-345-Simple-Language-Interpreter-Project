@@ -221,6 +221,15 @@
 ; checks what kind of statement the first statement in the syntax tree is and calls the correct function on it
 ; recurses on itself with the the cdr of the syntax tree and the state returned from the the function called on the car of the syntax tree
 ; if the state is just a single value, returns that value
+(define removeLayer
+  (lambda (state)
+    (cdr state)))
+(
+;remove the top most la
+(define M_block
+  (lambda (stmt state return break continue throw)
+    (removeLayer (M_state stmt (addLayer state) return continue throw))))
+
 (define M_state
   (lambda (tree state return break continue throw)
     (cond
