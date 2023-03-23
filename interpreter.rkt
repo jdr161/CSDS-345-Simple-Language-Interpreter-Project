@@ -36,14 +36,19 @@
       (else                         (findBinding name (cdr state))))))
 
 ; helper function declared? finds if a given var name is in the state or not
- (define declared?
-  (lambda (name state)
+ (define declared-cc
+  (lambda (name state break)
     (cond
       [(null? state)               #f]
-      [(eq? (car state) name)            #t]
-      [(null? (cdr state))               (declared? name (car state))]
-      [(list? (cdr state))        (or (declared? name (cdr state))(declared? name (car state)))]
-      [else (declared? name        (cdr state))])))
+      [(or (number? (car state)) (eq? 'null (car state))) (break #f)]
+      [(eq? (car state) name)            (break #t)]
+      [(null? (cdr state))               (declared-cc name (car state) break)]
+      [(list? (cdr state))        (or (declared-cc name (cdr state) break)(declared-cc name (car state) break))]
+      [else (declared-cc name        (cdr state) break)])))
+(define declared?
+  (lambda (name state)
+     (call/cc
+      (lambda (k) (declared-cc name state k)))))
 ;'(((x 10) (y 20)) ((z 5)))
 
 ; operator function
