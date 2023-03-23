@@ -5,19 +5,45 @@
 ;Maria Eradze
 ;Wendy Wu
 
+; helper function declared? finds if a given var name is in the state or not
+ (define declared-cc
+  (lambda (name state break)
+    (cond
+      [(null? state)                 #f]
+      [(null? (car state))           #f]
+      [(list? (car (car state)))     (if (null? (cdr state)) ; case that state is a list of layers
+                                         (declared-cc name (car state) break)
+                                         (or (declared-cc name (car state) break) (declared-cc name (cdr state) break)))]
+      [(eq? (car (car state)) name)  (break #t)] ; case that state is a single layer
+      [else                          (declared-cc name (cdr state) break)])))
+(define declared?
+  (lambda (name state)
+     (call/cc
+      (lambda (k) (declared-cc name state k)))))
+
 ; addBinding takes a name, value, and a state
 ; adds that key-value pair to the state
 ; replaces any existing binding if one already exists with the same name
 ; returns the state
 (define addBinding
   (lambda (name val state)
+    (if (declared? name state)
+        (changeBinding name val state)
+        (cons (cons (list name val) (car state)) (cdr state)))))
+(define changeBinding
+  (lambda (name val state)
     (cond
-      [(eq? val 'true)                      (addBinding name #t state)]
-      [(eq? val 'false)                     (addBinding name #f state)]
-      [(null? (car state))                  (cons (list(list name val)) '())] ;when state is '(())
-      [(eq? (car (car state)) name) (cons (list name val) (cdr state))]
-      (else (cons (car state)       (addBinding name val (cdr state)))))))
-     ;(else (cons (car state)       (addBinding name val (cdr state)))))))
+      [(null? state)       (error "something wrong with addBinding")]
+      [(null? (cdr state)) (changeBindingInLayer name val (car state))]
+      (else                (cons (changeBindingInLayer name val (car state)) (changeBinding name val (cdr state)))))))
+(define changeBindingInLayer
+  (lambda (name val layer)
+    (cond
+      [(null? layer) '()]
+      [(eq? (car (car layer)) name) (list (cons (list name val) (cdr layer)))]
+      (else (cons (car layer) (changeBindingInLayer name val (cdr layer)))))))
+
+(addBinding 'x 1 '(((a 1) (b 2)) ((x 3)))  )
 
 ; findBinding takes a name and a state
 ; finds the binding with the correct name
@@ -34,21 +60,6 @@
                                         (error name "cannot use variable before it is assigned a value/this will not return anything") 
                                         (car (cdr (car state))))]
       (else                         (findBinding name (cdr state))))))
-
-; helper function declared? finds if a given var name is in the state or not
- (define declared-cc
-  (lambda (name state break)
-    (cond
-      [(null? state)                 #f]
-      [(list? (car (car state)))     (if (null? (cdr state)) ; case that state is a list of layers
-                                         (declared-cc name (car state) break)
-                                         (or (declared-cc name (car state) break) (declared-cc name (cdr state) break)))]
-      [(eq? (car (car state)) name)  (break #t)] ; case that state is a single layer
-      [else                          (declared-cc name (cdr state) break)])))
-(define declared?
-  (lambda (name state)
-     (call/cc
-      (lambda (k) (declared-cc name state k)))))
 
 ; operator function
 ;(> 10 20) basically the operator function gives the operator of the pair/list
