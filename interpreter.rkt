@@ -39,17 +39,16 @@
  (define declared-cc
   (lambda (name state break)
     (cond
-      [(null? state)               #f]
-      [(or (number? (car state)) (eq? 'null (car state))) (break #f)]
-      [(eq? (car state) name)            (break #t)]
-      [(null? (cdr state))               (declared-cc name (car state) break)]
-      [(list? (cdr state))        (or (declared-cc name (cdr state) break)(declared-cc name (car state) break))]
-      [else (declared-cc name        (cdr state) break)])))
+      [(null? state)                 #f]
+      [(list? (car (car state)))     (if (null? (cdr state)) ; case that state is a list of layers
+                                         (declared-cc name (car state) break)
+                                         (or (declared-cc name (car state) break) (declared-cc name (cdr state) break)))]
+      [(eq? (car (car state)) name)  (break #t)] ; case that state is a single layer
+      [else                          (declared-cc name (cdr state) break)])))
 (define declared?
   (lambda (name state)
      (call/cc
       (lambda (k) (declared-cc name state k)))))
-;'(((x 10) (y 20)) ((z 5)))
 
 ; operator function
 ;(> 10 20) basically the operator function gives the operator of the pair/list
@@ -271,7 +270,7 @@
     (findReturnVal (call/cc (lambda (return) (M_state(parser filename) (newState) return (lambda (v) error) (lambda (v) error) (lambda (v1) error))))))) ; () shows returns true for (null? '())
 
 (parser "test1.txt")
-(interpret "test1.txt")
+;(interpret "test1.txt")
 ;(interpret "t2.txt")
 ;(interpret "t3.txt")
 ;(interpret "t4.txt")
