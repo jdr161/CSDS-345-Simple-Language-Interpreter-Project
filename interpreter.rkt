@@ -69,6 +69,24 @@
   (lambda (expr)
        (cdr (cdr (cdr expr)))))
 
+; getFirstStatementType returns the type of statement of the first statement for a list of statements
+; (getFirstStatementType ((var x) (= x 1))) => 'var
+(define getFirstStatementType
+  (lambda (tree)
+    (car (car tree))))
+
+; getFirstStatement returns the first statement in a list of statements
+; (getFirstStatement ((var x) (= x 1))) => (var x)
+(define getFirstStatement
+  (lambda (tree)
+    (car tree)))
+
+; getRestOfStatements returns the first statement in a list of statements
+; (getRestOfStatements ((var x) (= x 1))) =>  '((= x 1))
+(define getRestOfStatements
+  (lambda (tree)
+    (cdr tree)))
+
 ; newState returns a blank state, ready to pass into M_state
 (define newState
   (lambda ()
@@ -199,15 +217,19 @@
 ; recurses on itself with the the cdr of the syntax tree and the state returned from the the function called on the car of the syntax tree
 ; if the state is just a single value, returns that value
 (define M_state
-  (lambda (tree state)
+  (lambda (tree state return break continue throw)
     (cond
-      [(null? tree)                   state]
-      [(eq? 'var (car (car tree)))    (M_state (cdr tree) (M_declaration (car tree) state))]
-      [(eq? '= (car (car tree)))      (M_state (cdr tree) (M_assignment (car tree) state))]
-      [(eq? 'return (car (car tree))) (M_return (car tree) state)]
-      [(eq? 'if (car (car tree)))     (M_state (cdr tree) (M_if (car tree) state))]
-      [(eq? 'while (car (car tree)))  (M_state (cdr tree) (M_while (car tree) state))]
-      (else                           (error (car (car tree)) "unrecognized statement type")))))
+      [(null? tree)                               state]
+      [(eq? 'var (getFirstStatementType tree))    (M_state (getRestOfStatements tree) (M_declaration (getFirstStatement tree) state) return break continue throw)]
+      [(eq? '= (getFirstStatementType tree))      (M_state (getRestOfStatements tree) (M_assignment (getFirstStatement tree) state) return break continue throw)]
+      [(eq? 'return (getFirstStatementType tree)) (return (M_return (getFirstStatement tree) state))]
+      [(eq? 'if (getFirstStatementType tree))     (M_state (getRestOfStatements tree) (M_if (getFirstStatement tree) state return break continue throw) return break continue throw)]
+      [(eq? 'while (getFirstStatementType tree))  (M_state (getRestOfStatements tree) (M_while (getFirstStatement tree) state return break continue throw) return break continue throw)]
+      [(eq? 'break (getFirstStatementType tree))  (break state)]
+      [(eq? 'throw (getFirstStatementType tree))  (M_state (getRestOfStatements tree) (M_throw (getFirstStatement tree) state throw) return break continue throw)]
+      [(eq? 'try (getFirstStatementType tree))    (M_state (getRestOfStatements tree) (M_try (getFirstStatement tree) state return break continue throw) return break continue throw)]
+      [(eq? 'begin (getFirstStatementType tree))  (M_state (getRestOfStatements tree) (M_block (getFirstStatement tree) state return break continue throw) return break continue throw)]
+      (else                           (error (getFirstStatementType tree) "unrecognized statement type")))))
   
 
 ; interpret takes a filename
@@ -216,7 +238,7 @@
 ; returns the return value from that syntax tree
 (define interpret
   (lambda (filename)
-    (findReturnVal (M_state(parser filename) (newState))))) ; () shows returns true for (null? '())
+    (findReturnVal (call/cc (lambda (return) (M_state(parser filename) (newState) return (error "continue used outside of while loop") (error "throw used outside of catch statement"))))))) ; () shows returns true for (null? '())
 
 ;(parser "fix1test.txt")
 ;(interpret "fix1test.txt")
