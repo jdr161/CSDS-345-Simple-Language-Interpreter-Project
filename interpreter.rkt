@@ -194,23 +194,28 @@
 ; evaluates the conditional and calls M_state on the correct statement as necessary
 ; returns the new state
 (define M_if
-  (lambda (statements state)
+  (lambda (statements state return break continue throw)
     (cond
       [(null? statements) state] ; i assume if passed in it is not gonna be null though
-      [(M_boolean (leftoperand statements) state) (M_state (cons (rightoperand statements) '()) state)] ;if conditional is true, we execute thenstatement and update the state
+      [(M_boolean (leftoperand statements) state) (M_state (cons (rightoperand statements) '()) state return break continue throw)] ;if conditional is true, we execute thenstatement and update the state
       [(null? (fourthoperand statements))    state] ; check if the else statement is null then just return state as it is
-      [else                                     (M_state (fourthoperand statements) state)]))) ; return the else statement state if there exist else 
+      [else                                     (M_state (fourthoperand statements) state return break continue throw)]))) ; return the else statement state if there exist else 
 
 
 ; M_while takes a while statement (in the form 	(while conditional body-statement)) and a state
 ; recurses if the conditional returns true
 ; returns the state if the conditional returns false
 (define M_while
-  (lambda (cstatements state)
-    (cond
-      [(M_boolean (leftoperand cstatements) state) (M_while cstatements (M_state (cons (rightoperand cstatements) '()) state))]
-      ;while the condition is true, we will continue running the body statement and update the state using M_while
-      (else                                         state)))) ;if returned false then just return the state
+  (lambda (cstatements state return throw)
+    (call/cc (lambda (break)     
+      (cond
+        [(M_boolean (leftoperand cstatements) state) (M_while cstatements (M_state (cons (rightoperand cstatements) '())
+                                                                                   return ; return is the same
+                                                                                   break  ; break will return a state the call/cc we just set up
+                                                                                   (lambda (contState) (break (M_while cstatements contState return throw))) ; continue skips everything else in an iteration and directly begins the next iteration
+                                                                                   throw))] ; throw stays the same
+        ;while the condition is true, we will continue running the body statement and update the state using M_while
+        (else                                         state)))) ;if returned false then just return the state
 
 ; M_state takes a syntax tree and a state
 ; checks what kind of statement the first statement in the syntax tree is and calls the correct function on it
@@ -219,16 +224,17 @@
 (define M_state
   (lambda (tree state return break continue throw)
     (cond
-      [(null? tree)                               state]
-      [(eq? 'var (getFirstStatementType tree))    (M_state (getRestOfStatements tree) (M_declaration (getFirstStatement tree) state) return break continue throw)]
-      [(eq? '= (getFirstStatementType tree))      (M_state (getRestOfStatements tree) (M_assignment (getFirstStatement tree) state) return break continue throw)]
-      [(eq? 'return (getFirstStatementType tree)) (return (M_return (getFirstStatement tree) state))]
-      [(eq? 'if (getFirstStatementType tree))     (M_state (getRestOfStatements tree) (M_if (getFirstStatement tree) state return break continue throw) return break continue throw)]
-      [(eq? 'while (getFirstStatementType tree))  (M_state (getRestOfStatements tree) (M_while (getFirstStatement tree) state return break continue throw) return break continue throw)]
-      [(eq? 'break (getFirstStatementType tree))  (break state)]
-      [(eq? 'throw (getFirstStatementType tree))  (M_state (getRestOfStatements tree) (M_throw (getFirstStatement tree) state throw) return break continue throw)]
-      [(eq? 'try (getFirstStatementType tree))    (M_state (getRestOfStatements tree) (M_try (getFirstStatement tree) state return break continue throw) return break continue throw)]
-      [(eq? 'begin (getFirstStatementType tree))  (M_state (getRestOfStatements tree) (M_block (getFirstStatement tree) state return break continue throw) return break continue throw)]
+      [(null? tree)                                state]
+      [(eq? 'var (getFirstStatementType tree))     (M_state (getRestOfStatements tree) (M_declaration (getFirstStatement tree) state) return break continue throw)]
+      [(eq? '= (getFirstStatementType tree))       (M_state (getRestOfStatements tree) (M_assignment (getFirstStatement tree) state) return break continue throw)]
+      [(eq? 'return (getFirstStatementType tree))  (return (M_return (getFirstStatement tree) state))]
+      [(eq? 'if (getFirstStatementType tree))      (M_state (getRestOfStatements tree) (M_if (getFirstStatement tree) state return break continue throw) return break continue throw)]
+      [(eq? 'while (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_while (getFirstStatement tree) state return throw) return break continue throw)]
+      [(eq? 'break (getFirstStatementType tree))   (break state)]
+      [(eq? 'throw (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_throw (getFirstStatement tree) state throw) return break continue throw)]
+      [(eq? 'try (getFirstStatementType tree))     (M_state (getRestOfStatements tree) (M_try (getFirstStatement tree) state return break continue throw) return break continue throw)]
+      [(eq? 'begin (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_block (getFirstStatement tree) state return break continue throw) return break continue throw)]
+      [(eq? 'continue (getFirstStatementType tree))(continue state)]
       (else                           (error (getFirstStatementType tree) "unrecognized statement type")))))
   
 
