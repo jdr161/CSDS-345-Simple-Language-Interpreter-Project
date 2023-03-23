@@ -34,16 +34,16 @@
   (lambda (name val state)
     (cond
       [(null? state)       (error "something wrong with addBinding")]
-      [(null? (cdr state)) (changeBindingInLayer name val (car state))]
+      [(null? (cdr state)) (list (changeBindingInLayer name val (car state)))]
       (else                (cons (changeBindingInLayer name val (car state)) (changeBinding name val (cdr state)))))))
 (define changeBindingInLayer
   (lambda (name val layer)
     (cond
       [(null? layer) '()]
-      [(eq? (car (car layer)) name) (list (cons (list name val) (cdr layer)))]
+      [(eq? (car (car layer)) name) (cons (list name val) (cdr layer))]
       (else (cons (car layer) (changeBindingInLayer name val (cdr layer)))))))
 
-(addBinding 'x 1 '(((a 1) (b 2)) ((x 3)))  )
+(addBinding 'x 1 '(((a 1) (x 2)) ((z 2) (v 3)))  )
 
 ; findBinding takes a name and a state
 ; finds the binding with the correct name
