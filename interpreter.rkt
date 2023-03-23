@@ -10,7 +10,7 @@
   (lambda (name state break)
     (cond
       [(null? state)                 #f]
-      [(null? (car state))           #f]
+      [(null? (car state))           (declared-cc name (cdr state) break)]
       [(list? (car (car state)))     (if (null? (cdr state)) ; case that state is a list of layers
                                          (declared-cc name (car state) break)
                                          (or (declared-cc name (car state) break) (declared-cc name (cdr state) break)))]
@@ -43,7 +43,7 @@
       [(eq? (car (car layer)) name) (cons (list name val) (cdr layer))]
       (else (cons (car layer) (changeBindingInLayer name val (cdr layer)))))))
 
-(addBinding 'x 1 '(((a 1) (x 2)) ((z 2) (v 3)))  )
+;(addBinding 'x 1 '(((a 1) (x 2)) ((z 2) (v 3)))  )
 
 ; findBinding takes a name and a state
 ; finds the binding with the correct name
