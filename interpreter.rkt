@@ -43,23 +43,33 @@
       [(eq? (car (car layer)) name) (cons (list name val) (cdr layer))]
       (else (cons (car layer) (changeBindingInLayer name val (cdr layer)))))))
 
-;(addBinding 'x 1 '(((a 1) (x 2)) ((z 2) (v 3)))  )
-
 ; findBinding takes a name and a state
 ; finds the binding with the correct name
 ; if not binding with the inputted name can be found
 ; throws an error using (error msg)
+; TODO: throws an error if the binding is null
 ; returns the value of the binding
 (define findBinding
   (lambda (name state)
     (cond
       [(eq? name 'true)             #t]
       [(eq? name 'false)            #f]
-      [(null? state)                (error name "variable used before declaration")]
-      [(eq? (car (car state)) name) (if (null? (car (cdr (car state))))
-                                        (error name "cannot use variable before it is assigned a value/this will not return anything") 
-                                        (car (cdr (car state))))]
-      (else                         (findBinding name (cdr state))))))
+      (else (call/cc (lambda (return)
+                       (findBinding-cc name state return)))))))
+(define findBinding-cc
+  (lambda (name state return)
+    (cond
+      [(null? state)       (error name "variable used before declaration")]
+      [(null? (cdr state)) (findBindingInLayer-cc name (car state) return)]
+      (else                (cons (findBindingInLayer-cc name (car state) return) (findBinding-cc name (cdr state) return))))))
+(define findBindingInLayer-cc
+  (lambda (name layer return)
+    (cond
+      [(null? layer) '()]
+      [(eq? (car (car layer)) name) (return (car (cdr (car layer))))]
+      (else (cons (car layer) (findBindingInLayer-cc name (cdr layer) return))))))
+
+(findBinding 'x '(((a 2) (f 3))))
 
 ; operator function
 ;(> 10 20) basically the operator function gives the operator of the pair/list
@@ -209,9 +219,7 @@
 ; returns the value of the expression
 (define M_return
   (lambda (statement state)
-    (if (returnDefined? state)
-        state
-        (addBinding 'return (M_value (leftoperand statement) state) state))))
+    (addBinding 'return (M_value (leftoperand statement) state) state)))
 
 ; M_if takes an if statement (in the form (if conditional then-statement optional-else-statement)) and a state
 ; evaluates the conditional and calls M_state on the correct statement as necessary
