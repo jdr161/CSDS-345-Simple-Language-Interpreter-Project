@@ -14,9 +14,10 @@
     (cond
       [(eq? val 'true)                      (addBinding name #t state)]
       [(eq? val 'false)                     (addBinding name #f state)]
-      [(null? state)                             (list(list name val))]
+      [(null? (car state))                  (cons (list(list name val)) '())] ;when state is '(())
       [(eq? (car (car state)) name) (cons (list name val) (cdr state))]
       (else (cons (car state)       (addBinding name val (cdr state)))))))
+     ;(else (cons (car state)       (addBinding name val (cdr state)))))))
 
 ; findBinding takes a name and a state
 ; finds the binding with the correct name
@@ -39,8 +40,11 @@
   (lambda (name state)
     (cond
       [(null? state)               #f]
-      [(eq? (car(car state)) name) #t]
+      [(eq? (car state) name)            #t]
+      [(null? (cdr state))               (declared? name (car state))]
+      [(list? (cdr state))        (or (declared? name (cdr state))(declared? name (car state)))]
       [else (declared? name        (cdr state))])))
+;'(((x 10) (y 20)) ((z 5)))
 
 ; operator function
 ;(> 10 20) basically the operator function gives the operator of the pair/list
