@@ -283,30 +283,30 @@
     (call/cc (lambda (return) (M_state(parser filename) (newState) return (lambda (v) error) (lambda (v) error) (lambda (v1) error)))))) ; () shows returns true for (null? '())
 
 (parser "test2.txt")
-;(interpret "test1.txt")
-(interpret "test2.txt")
-;(interpret "test3.txt")
-;(interpret "t4.txt")
-;(interpret "t5.txt")
-;(interpret "t6.txt")
-;(interpret "t7.txt")
-;(interpret "t8.txt")
-;(interpret "t9.txt")
-;(interpret "t10.txt")
-;(interpret "t11.txt")
-;(interpret "t12.txt")
-;(interpret "t13.txt")
-;(interpret "t14.txt")
-;(interpret "t15.txt")
-;(interpret "t16.txt")
-;(interpret "t17.txt")
-;(interpret "t18.txt")
-;(interpret "t19.txt")
-;(interpret "t20.txt")
-;(interpret "t21.txt")
-;(interpret "t22.txt")
-;(interpret "t23.txt")
-;(interpret "t24.txt")
+;(interpret "test1.txt") ; expected: 20
+(interpret "test2.txt") ; expected: 164
+;(interpret "test3.txt") ; expected: 32
+;(interpret "t4.txt") ; expected: 2
+;(interpret "t5.txt") ; expected: error
+;(interpret "t6.txt") ; expected: 25
+;(interpret "t7.txt") ; expected: 21
+;(interpret "t8.txt") ; expected: 6
+;(interpret "t9.txt") ; expected: -1
+;(interpret "t10.txt") ; expected: 789
+;(interpret "t11.txt") ; expected: error
+;(interpret "t12.txt") ; expected: error
+;(interpret "t13.txt") ; expected: error
+;(interpret "t14.txt") ; expected: 12
+;(interpret "t15.txt") ; expected: 125
+;(interpret "t16.txt") ; expected: 110
+;(interpret "t17.txt") ; expected: 2000400
+;(interpret "t18.txt") ; expected: 101
+;(interpret "t19.txt") ; expected: error
+;(interpret "t20.txt") ; expected: ??
+;(interpret "t21.txt") ; expected: ??
+;(interpret "t22.txt") ; expected: ??
+;(interpret "t23.txt") ; expected: ??
+;(interpret "t24.txt") ; expected: ??
 
 ;t1 runs and returns 150
 ;t2 runs and returns -4 (used (round x ) to make sure we get integers
