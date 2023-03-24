@@ -232,7 +232,7 @@
   (lambda (cstatements state return throw)
     (call/cc (lambda (break)     
       (cond
-        [(M_boolean (leftoperand cstatements) state) (M_while cstatements (M_state (cons (rightoperand cstatements) '())
+        [(M_boolean (leftoperand cstatements) state) (M_while cstatements (M_state cstatements (cons (rightoperand cstatements) '())
                                                                                    return ; return is the same
                                                                                    break  ; break will return a state the call/cc we just set up
                                                                                    (lambda (contState) (break (M_while cstatements contState return throw))) ; continue skips everything else in an iteration and directly begins the next iteration
@@ -263,11 +263,11 @@
       [(eq? '= (getFirstStatementType tree))       (M_state (getRestOfStatements tree) (M_assignment (getFirstStatement tree) state) return break continue throw)]
       [(eq? 'return (getFirstStatementType tree))  (M_return (getFirstStatement tree) state)]
       [(eq? 'if (getFirstStatementType tree))      (M_state (getRestOfStatements tree) (M_if (getFirstStatement tree) state return break continue throw) return break continue throw)]
-      [(eq? 'while (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_while (getFirstStatement tree) state return throw) return break continue throw)]
+      [(eq? 'while (getFirstStatementType tree))   (M_while (getFirstStatement tree) state return throw)]
       [(eq? 'break (getFirstStatementType tree))   (break state)]
       ;[(eq? 'throw (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_throw (getFirstStatement tree) state throw) return break continue throw)]
       ;[(eq? 'try (getFirstStatementType tree))     (M_state (getRestOfStatements tree) (M_try (getFirstStatement tree) state return break continue throw) return break continue throw)]
-      [(eq? 'begin (getFirstStatementType tree))   (M_block (getFirstStatement tree) state return break continue throw)]
+      [(eq? 'begin (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_block (getFirstStatement tree) state return break continue throw) return break continue throw)]
       [(eq? 'continue (getFirstStatementType tree))(continue state)]
       (else                           (error (getFirstStatementType tree) "unrecognized statement type")))))
   
@@ -282,8 +282,8 @@
 
 (parser "test1.txt")
 (interpret "test1.txt")
-;(interpret "t2.txt")
-;(interpret "t3.txt")
+;(interpret "test2.txt")
+;(interpret "test3.txt")
 ;(interpret "t4.txt")
 ;(interpret "t5.txt")
 ;(interpret "t6.txt")
