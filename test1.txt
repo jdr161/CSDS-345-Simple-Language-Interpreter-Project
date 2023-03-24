@@ -1,10 +1,7 @@
 var x = 10;
-try {
-  x=9;
+{
+  var y = 2;
+  var z = x * y;
+  x = z;
 }
-finally {
-x=5;
-return 2;
-}
-
 return x;

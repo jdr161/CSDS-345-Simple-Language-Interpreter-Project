@@ -64,7 +64,7 @@
 (define findBindingInLayer-cc
   (lambda (name layer return)
     (cond
-      [(null? layer) '()]
+      [(null? layer) layer]
       [(eq? (car (car layer)) name) (return (car (cdr (car layer))))]
       (else (findBindingInLayer-cc name (cdr layer) return)))))
 
@@ -118,23 +118,6 @@
 (define newState
   (lambda ()
     (list (list))))
-;((return ()))
-;(())
-;'(((x 10)))
-;(((x 10) (y 20)))
-
-
-; returnDefined? takes a state
-; returns #t if return has been assigned a value
-; #f otherwise
-(define returnDefined?
-  (lambda (state)
-    (cond
-      [(eq? (car (car state)) 'return) (if (null? (car (cdr (car state))))
-                                           #f
-                                           #t)]
-      (else                            (returnDefined? (cdr state))))))
- 
 
 ; M_value takes an expression and a state
 ; evaluates the expression
@@ -210,7 +193,9 @@
 ; returns the value of the expression
 (define M_return
   (lambda (statement state)
-    (M_value (leftoperand statement) state)))
+    (cond
+      ((not (null? (M_value (leftoperand statement) state)))      (M_value (leftoperand statement) state))
+      (else (error "error the return variable doesn't exist")))))
 
 ; M_if takes an if statement (in the form (if conditional then-statement optional-else-statement)) and a state
 ; evaluates the conditional and calls M_state on the correct statement as necessary
@@ -332,27 +317,27 @@
   (lambda (filename)
     (call/cc (lambda (return) (M_state(parser filename) (newState) return (lambda (v) error) (lambda (v) error) (lambda (v1) error)))))) ; () shows returns true for (null? '())
 
-(parser "test16.txt")
+;(parser "test16.txt")
 ;(parser "test1.txt")
-;(interpret "test1.txt") ; expected: 20      (failed, returned 2)
-;(interpret "test2.txt") ; expected: 164       2-10, 14-19(failed, car:contract violation, expected: pair?, given '())
+;(interpret "test1.txt") ; expected: 20     
+;(interpret "test2.txt") ; expected: 164       
 ;(interpret "test3.txt") ; expected: 32
 ;(interpret "test4.txt") ; expected: 2
-;(interpret "test5.txt") ; expected: error
+;(interpret "test5.txt") ; expected: error        (failed, returned '())
 ;(interpret "test6.txt") ; expected: 25
 ;(interpret "test7.txt") ; expected: 21
 ;(interpret "test8.txt") ; expected: 6
 ;(interpret "test9.txt") ; expected: -1
 ;(interpret "test10.txt") ; expected: 789
-;(interpret "test11.txt") ; expected: error
+(interpret "test11.txt") ; expected: error       (failed, returned -1)
 ;(interpret "test12.txt") ; expected: error
 ;(interpret "test13.txt") ; expected: error
 ;(interpret "test14.txt") ; expected: 12
 ;(interpret "test15.txt") ; expected: 125
-(interpret "test16.txt") ; expected: 110
-;(interpret "test17.txt") ; expected: 2000400
+;(interpret "test16.txt") ; expected: 110
+;(interpret "test17.txt") ; expected: 2000400      (failed, returned error i: variable name is already taken)
 ;(interpret "test18.txt") ; expected: 101
-;(interpret "test19.txt") ; expected: error
+;(interpret "test19.txt") ; expected: error          (failed, returned arity mismatch, expected: 1, given 2 at throw e-val-new state-new in M_try)
 ;(interpret "test20.txt") ; expected: ??
 ;(interpret "test21.txt") ; expected: ??
 ;(interpret "test22.txt") ; expected: ??
