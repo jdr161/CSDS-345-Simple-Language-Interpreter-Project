@@ -51,33 +51,22 @@
 (define findBinding
   (lambda (name state)
     (cond
-      [(null? state)     (error name "variable used before declaration")]
-      [(eq? name 'true)                 #t]
-      [(eq? name 'false)                #f]
-      [(eq? (car (car state)) name)     (if (eq? (car (cdr (car state))) '())
-                                            (error name "cannot use variable before it is assigned a value/this will not return anything")
-                                            (car (cdr (car state))))]
-      [(not (list? (car (car state))))  (findBinding name (cdr state))]
-      [else                             (findBinding-x name state)])))
-; this is called if the state is made of layers
-(define findBinding-x
-  (lambda (name state)
-    (cond
       [(eq? name 'true)             #t]
       [(eq? name 'false)            #f]
-      [(null? state)                'null]
-      [(list? (car (car state)))     (if (null? (cdr state)) ; case that state is a list of layers
-                                         (if (eq? (findBinding-x name (car state)) 'null)
-                                             (error name "variable used before declaration")
-                                             (findBinding-x name (car state)))
-                                         (cond
-                                           [(not (eq? (findBinding-x name (car state)) 'null))   (findBinding-x name (car state))]
-                                           [(not (eq? (findBinding-x name (cdr state)) 'null))   (findBinding-x name (cdr state))]
-                                           [else                            (error name "variable used before declaration")]))]   
-      [(eq? (car (car state)) name) (if (null? (car (cdr (car state))))
-                                        (error name "cannot use variable before it is assigned a value/this will not return anything") 
-                                        (car (cdr (car state))))]
-      [else                            (findBinding-x name (cdr state))])))
+      (else (call/cc (lambda (return)
+                       (findBinding-cc name state return)))))))
+(define findBinding-cc
+  (lambda (name state return)
+    (cond
+      [(null? state)       (error name "variable used before declaration")]
+      [(null? (cdr state)) (findBindingInLayer-cc name (car state) return)]
+      (else                (cons (findBindingInLayer-cc name (car state) return) (findBinding-cc name (cdr state) return))))))
+(define findBindingInLayer-cc
+  (lambda (name layer return)
+    (cond
+      [(null? layer) '()]
+      [(eq? (car (car layer)) name) (return (car (cdr (car layer))))]
+      (else (findBindingInLayer-cc name (cdr layer) return)))))
 
 
 ; operator function
@@ -344,9 +333,9 @@
     (call/cc (lambda (return) (M_state(parser filename) (newState) return (lambda (v) error) (lambda (v) error) (lambda (v1) error)))))) ; () shows returns true for (null? '())
 
 ;(parser "test16.txt")
-(parser "test1.txt")
-(interpret "test1.txt") ; expected: 20
-;(interpret "test2.txt") ; expected: 164
+;(parser "test1.txt")
+;(interpret "test1.txt") ; expected: 20      (failed, returned 2)
+;(interpret "test2.txt") ; expected: 164       2-10, 14-19(failed, car:contract violation, expected: pair?, given '())
 ;(interpret "test3.txt") ; expected: 32
 ;(interpret "test4.txt") ; expected: 2
 ;(interpret "test5.txt") ; expected: error
