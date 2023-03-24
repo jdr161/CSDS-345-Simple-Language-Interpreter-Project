@@ -317,7 +317,7 @@
       [(eq? 'if (getFirstStatementType tree))      (M_state (getRestOfStatements tree) (M_if (getFirstStatement tree) state return break continue throw) return break continue throw)]
       [(eq? 'while (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_while (getFirstStatement tree) state return throw) return break continue throw)]
       [(eq? 'break (getFirstStatementType tree))   (break state)]
-      [(eq? 'throw (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_throw (getFirstStatement tree) state throw) return break continue throw)]
+      [(eq? 'throw (getFirstStatementType tree))   (M_throw state (leftoperand (getFirstStatement tree)) throw)]
       [(eq? 'try (getFirstStatementType tree))     (M_state (getRestOfStatements tree) (M_try (getFirstStatement tree) state return break continue throw) return break continue throw)]
       [(eq? 'begin (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_block (getFirstStatement tree) state return break continue throw) return break continue throw)]
       [(eq? 'continue (getFirstStatementType tree))(continue state)]
@@ -332,7 +332,7 @@
   (lambda (filename)
     (call/cc (lambda (return) (M_state(parser filename) (newState) return (lambda (v) error) (lambda (v) error) (lambda (v1) error)))))) ; () shows returns true for (null? '())
 
-;(parser "test16.txt")
+(parser "test16.txt")
 ;(parser "test1.txt")
 ;(interpret "test1.txt") ; expected: 20      (failed, returned 2)
 ;(interpret "test2.txt") ; expected: 164       2-10, 14-19(failed, car:contract violation, expected: pair?, given '())
@@ -349,7 +349,7 @@
 ;(interpret "test13.txt") ; expected: error
 ;(interpret "test14.txt") ; expected: 12
 ;(interpret "test15.txt") ; expected: 125
-;(interpret "test16.txt") ; expected: 110
+(interpret "test16.txt") ; expected: 110
 ;(interpret "test17.txt") ; expected: 2000400
 ;(interpret "test18.txt") ; expected: 101
 ;(interpret "test19.txt") ; expected: error
