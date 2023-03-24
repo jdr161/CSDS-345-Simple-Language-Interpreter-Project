@@ -246,6 +246,8 @@
 ; checks what kind of statement the first statement in the syntax tree is and calls the correct function on it
 ; recurses on itself with the the cdr of the syntax tree and the state returned from the the function called on the car of the syntax tree
 ; if the state is just a single value, returns that value
+
+
 (define removeLayer
   (lambda (state)
     (cdr state)))
@@ -257,18 +259,67 @@
   (lambda (stmt state return break continue throw)
     (removeLayer (M_state (cdr stmt) (addLayer state) return break continue throw))))
 
+(define M_throw
+  (lambda (state e throw)
+    (throw (M_value e state) state)))
+
+
+(define getTryBlock
+  (lambda (tryStmt)
+    (cons 'begin (car (cdr tryStmt)))))
+(define getFinallyBlock
+  (lambda (tryStmt)
+    (if (null? (car (cdr (cdr (cdr tryStmt)))))
+        '(begin)
+        (cons 'begin (car (cdr (car (cdr (cdr (cdr tryStmt))))))))))
+(define getCatchStmts
+  (lambda (tryStmt throw e-val state)
+    (if (null? (car (cdr (cdr tryStmt))))
+        (throw e-val state) ; if catch is completely empty, throw the error up a level: (try (body) () (finally (body))) => throw error to one level up
+        (car (cdr (cdr (car (cdr (cdr tryStmt)))))))))
+(define getCatchErrorName
+  (lambda (tryStmt)
+    (car (car (cdr (car (cdr (cdr tryStmt))))))))
+
+
+(define M_try
+  (lambda (stmt state return break continue throw)
+    (call/cc (lambda (return-try)
+               (M_block (getFinallyBlock stmt)
+                        (M_block (getTryBlock stmt)
+                                 state
+                                (lambda (v) (begin (M_block (getFinallyBlock stmt) state return break continue throw) (return v))) ; return must do finally block before returning
+                                (lambda (state) (break (M_block (getFinallyBlock stmt) state return break continue throw))) ; break must do finally block before breaking
+                                (lambda (state) (continue (M_block (getFinallyBlock stmt) state return break continue throw))) ; continue must do finally block before calling continue
+                                (lambda (e-val state) (return-try (M_block (getFinallyBlock stmt)
+                                                                           (removeLayer (M_state ; we call M_state because we create the new layer when we call addBinding on e
+                                                                                         (getCatchStmts stmt throw e-val state) ; getCatchStmts throws the error up a level if there is no catch
+                                                                                         (addBinding (getCatchErrorName stmt) e-val (addLayer state))
+                                                                                         return
+                                                                                         (lambda (state-new) (break (removeLayer state-new)))
+                                                                                         (lambda (state-new) (continue (removeLayer state-new)))
+                                                                                         (lambda (e-val-new state-new) (throw e-val-new state-new))))
+                                                                           return
+                                                                           break
+                                                                           continue
+                                                                           throw))))
+               return
+               break
+               continue
+               throw)))))
+    
 (define M_state
   (lambda (tree state return break continue throw)
     (cond
       [(null? tree)                                state]
       [(eq? 'var (getFirstStatementType tree))     (M_state (getRestOfStatements tree) (M_declaration (getFirstStatement tree) state) return break continue throw)]
       [(eq? '= (getFirstStatementType tree))       (M_state (getRestOfStatements tree) (M_assignment (getFirstStatement tree) state) return break continue throw)]
-      [(eq? 'return (getFirstStatementType tree))  (M_return (getFirstStatement tree) state)]
+      [(eq? 'return (getFirstStatementType tree))  (return (M_return (getFirstStatement tree) state))]
       [(eq? 'if (getFirstStatementType tree))      (M_state (getRestOfStatements tree) (M_if (getFirstStatement tree) state return break continue throw) return break continue throw)]
       [(eq? 'while (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_while (getFirstStatement tree) state return throw) return break continue throw)]
       [(eq? 'break (getFirstStatementType tree))   (break state)]
-      ;[(eq? 'throw (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_throw (getFirstStatement tree) state throw) return break continue throw)]
-      ;[(eq? 'try (getFirstStatementType tree))     (M_state (getRestOfStatements tree) (M_try (getFirstStatement tree) state return break continue throw) return break continue throw)]
+      [(eq? 'throw (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_throw (getFirstStatement tree) state throw) return break continue throw)]
+      [(eq? 'try (getFirstStatementType tree))     (M_state (getRestOfStatements tree) (M_try (getFirstStatement tree) state return break continue throw) return break continue throw)]
       [(eq? 'begin (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_block (getFirstStatement tree) state return break continue throw) return break continue throw)]
       [(eq? 'continue (getFirstStatementType tree))(continue state)]
       (else                           (error (getFirstStatementType tree) "unrecognized statement type")))))
@@ -282,31 +333,32 @@
   (lambda (filename)
     (call/cc (lambda (return) (M_state(parser filename) (newState) return (lambda (v) error) (lambda (v) error) (lambda (v1) error)))))) ; () shows returns true for (null? '())
 
-(parser "test2.txt")
-;(interpret "test1.txt") ; expected: 20
-(interpret "test2.txt") ; expected: 164
+;(parser "test16.txt")
+(parser "test1.txt")
+(interpret "test1.txt") ; expected: 20
+;(interpret "test2.txt") ; expected: 164
 ;(interpret "test3.txt") ; expected: 32
-;(interpret "t4.txt") ; expected: 2
-;(interpret "t5.txt") ; expected: error
-;(interpret "t6.txt") ; expected: 25
-;(interpret "t7.txt") ; expected: 21
-;(interpret "t8.txt") ; expected: 6
-;(interpret "t9.txt") ; expected: -1
-;(interpret "t10.txt") ; expected: 789
-;(interpret "t11.txt") ; expected: error
-;(interpret "t12.txt") ; expected: error
-;(interpret "t13.txt") ; expected: error
-;(interpret "t14.txt") ; expected: 12
-;(interpret "t15.txt") ; expected: 125
-;(interpret "t16.txt") ; expected: 110
-;(interpret "t17.txt") ; expected: 2000400
-;(interpret "t18.txt") ; expected: 101
-;(interpret "t19.txt") ; expected: error
-;(interpret "t20.txt") ; expected: ??
-;(interpret "t21.txt") ; expected: ??
-;(interpret "t22.txt") ; expected: ??
-;(interpret "t23.txt") ; expected: ??
-;(interpret "t24.txt") ; expected: ??
+;(interpret "test4.txt") ; expected: 2
+;(interpret "test5.txt") ; expected: error
+;(interpret "test6.txt") ; expected: 25
+;(interpret "test7.txt") ; expected: 21
+;(interpret "test8.txt") ; expected: 6
+;(interpret "test9.txt") ; expected: -1
+;(interpret "test10.txt") ; expected: 789
+;(interpret "test11.txt") ; expected: error
+;(interpret "test12.txt") ; expected: error
+;(interpret "test13.txt") ; expected: error
+;(interpret "test14.txt") ; expected: 12
+;(interpret "test15.txt") ; expected: 125
+;(interpret "test16.txt") ; expected: 110
+;(interpret "test17.txt") ; expected: 2000400
+;(interpret "test18.txt") ; expected: 101
+;(interpret "test19.txt") ; expected: error
+;(interpret "test20.txt") ; expected: ??
+;(interpret "test21.txt") ; expected: ??
+;(interpret "test22.txt") ; expected: ??
+;(interpret "test23.txt") ; expected: ??
+;(interpret "test24.txt") ; expected: ??
 
 ; to catch errors we make: (with-handlers ([exn:fail? (lambda (exn) 'air-bag)])
 ;                                 (error "crash!"))
