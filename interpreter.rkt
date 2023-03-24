@@ -232,11 +232,11 @@
   (lambda (cstatements state return throw)
     (call/cc (lambda (break)     
       (cond
-        [(M_boolean (leftoperand cstatements) state) (M_while cstatements (M_state cstatements (cons (rightoperand cstatements) '())
+        [(M_boolean (leftoperand cstatements) state) (M_state cstatements (cons (rightoperand cstatements) '())
                                                                                    return ; return is the same
                                                                                    break  ; break will return a state the call/cc we just set up
                                                                                    (lambda (contState) (break (M_while cstatements contState return throw))) ; continue skips everything else in an iteration and directly begins the next iteration
-                                                                                   throw))] ; throw stays the same
+                                                                                   throw)] ; throw stays the same
         ;while the condition is true, we will continue running the body statement and update the state using M_while
         (else                                         state)))))) ;if returned false then just return the state
 
@@ -254,7 +254,19 @@
 (define M_block
   (lambda (stmt state return break continue throw)
     (removeLayer (M_state (cdr stmt) (addLayer state) return break continue throw))))
-
+;(try body (catch (e) body) (finally body))
+;(try body (catch (e) body) ())
+;(try body () (finally body))
+;(body () (finally body))
+;(cdr
+;(cdr(car (cdr (cdr (cdr stmt))))) (finally's body)
+;if try throws an error, it goes to catch, if not, it goes to finally
+;M_try returns the state while modifying the state
+(define M_try
+  (lambda (stmt state return break continue throw)
+    (cond
+      [(and (eq? (getFirstStatement stmt) 'try)(null? (cdr(car (cdr (cdr (cdr stmt)))))))     (call/cc (lambda (throw) (M_state (car(cdr stmt)) state return break continue throw)))
+      
 (define M_state
   (lambda (tree state return break continue throw)
     (cond
@@ -263,10 +275,10 @@
       [(eq? '= (getFirstStatementType tree))       (M_state (getRestOfStatements tree) (M_assignment (getFirstStatement tree) state) return break continue throw)]
       [(eq? 'return (getFirstStatementType tree))  (M_return (getFirstStatement tree) state)]
       [(eq? 'if (getFirstStatementType tree))      (M_state (getRestOfStatements tree) (M_if (getFirstStatement tree) state return break continue throw) return break continue throw)]
-      [(eq? 'while (getFirstStatementType tree))   (M_while (getFirstStatement tree) state return throw)]
+      [(eq? 'while (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_while (getFirstStatement tree) state return throw) return break continue throw)]
       [(eq? 'break (getFirstStatementType tree))   (break state)]
       ;[(eq? 'throw (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_throw (getFirstStatement tree) state throw) return break continue throw)]
-      ;[(eq? 'try (getFirstStatementType tree))     (M_state (getRestOfStatements tree) (M_try (getFirstStatement tree) state return break continue throw) return break continue throw)]
+      [(eq? 'try (getFirstStatementType tree))     (M_state (getRestOfStatements tree) (M_try (getFirstStatement tree) state return break continue throw) return break continue throw)]
       [(eq? 'begin (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_block (getFirstStatement tree) state return break continue throw) return break continue throw)]
       [(eq? 'continue (getFirstStatementType tree))(continue state)]
       (else                           (error (getFirstStatementType tree) "unrecognized statement type")))))
@@ -280,10 +292,10 @@
   (lambda (filename)
     (call/cc (lambda (return) (M_state(parser filename) (newState) return (lambda (v) error) (lambda (v) error) (lambda (v1) error)))))) ; () shows returns true for (null? '())
 
-(parser "test1.txt")
-(interpret "test1.txt")
-;(interpret "test2.txt")
-;(interpret "test3.txt")
+(parser "test2.txt")
+;(interpret "test1.txt")
+;(interpret "test1.txt")
+(interpret "test3.txt")
 ;(interpret "t4.txt")
 ;(interpret "t5.txt")
 ;(interpret "t6.txt")
