@@ -308,6 +308,9 @@
 ;(interpret "t23.txt") ; expected: ??
 ;(interpret "t24.txt") ; expected: ??
 
+; to catch errors we make: (with-handlers ([exn:fail? (lambda (exn) 'air-bag)])
+;                                 (error "crash!"))
+
 ;t1 runs and returns 150
 ;t2 runs and returns -4 (used (round x ) to make sure we get integers
 ;t3 runs and returns 10
