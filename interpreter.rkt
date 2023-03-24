@@ -232,11 +232,13 @@
   (lambda (cstatements state return throw)
     (call/cc (lambda (break)     
       (cond
-        [(M_boolean (leftoperand cstatements) state) (M_while cstatements (M_state cstatements (cons (rightoperand cstatements) '())
+        [(M_boolean (leftoperand cstatements) state) (M_while cstatements (M_state (cons (rightoperand cstatements) '())
+                                                                                   state
                                                                                    return ; return is the same
                                                                                    break  ; break will return a state the call/cc we just set up
                                                                                    (lambda (contState) (break (M_while cstatements contState return throw))) ; continue skips everything else in an iteration and directly begins the next iteration
-                                                                                   throw))] ; throw stays the same
+                                                                                   throw) ; throw stays the same
+                                                              return throw)] 
         ;while the condition is true, we will continue running the body statement and update the state using M_while
         (else                                         state)))))) ;if returned false then just return the state
 
@@ -280,9 +282,9 @@
   (lambda (filename)
     (call/cc (lambda (return) (M_state(parser filename) (newState) return (lambda (v) error) (lambda (v) error) (lambda (v1) error)))))) ; () shows returns true for (null? '())
 
-(parser "test1.txt")
-(interpret "test1.txt")
-;(interpret "test2.txt")
+(parser "test2.txt")
+;(interpret "test1.txt")
+(interpret "test2.txt")
 ;(interpret "test3.txt")
 ;(interpret "t4.txt")
 ;(interpret "t5.txt")
