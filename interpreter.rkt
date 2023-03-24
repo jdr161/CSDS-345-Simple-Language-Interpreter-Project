@@ -52,22 +52,36 @@
 (define findBinding
   (lambda (name state)
     (cond
+      [(null? state)     (error name "variable used before declaration")]
+      [(eq? name 'true)                 #t]
+      [(eq? name 'false)                #f]
+      [(eq? (car (car state)) name)     (if (eq? (car (cdr (car state))) '())
+                                            (error name "cannot use variable before it is assigned a value/this will not return anything")
+                                            (car (cdr (car state))))]
+      [(not (list? (car (car state))))  (findBinding name (cdr state))]
+      [else                             (findBinding-x name state)])))
+
+; this is called if the state is made of layers
+(define findBinding-x
+  (lambda (name state)
+    (cond
       [(eq? name 'true)             #t]
       [(eq? name 'false)            #f]
-      (else (call/cc (lambda (return)
-                       (findBinding-cc name state return)))))))
-(define findBinding-cc
-  (lambda (name state return)
-    (cond
-      [(null? state)       (error name "variable used before declaration")]
-      [(null? (cdr state)) (findBindingInLayer-cc name (car state) return)]
-      (else                (cons (findBindingInLayer-cc name (car state) return) (findBinding-cc name (cdr state) return))))))
-(define findBindingInLayer-cc
-  (lambda (name layer return)
-    (cond
-      [(null? layer) '()]
-      [(eq? (car (car layer)) name) (return (car (cdr (car layer))))]
-      (else (findBindingInLayer-cc name (cdr layer) return)))))
+      [(null? state)                'null]
+      [(list? (car (car state)))     (if (null? (cdr state)) ; case that state is a list of layers
+                                         (if (eq? (findBinding-x name (car state)) 'null)
+                                             (error name "variable used before declaration")
+                                             (findBinding-x name (car state)))
+                                         (cond
+                                           [(not (eq? (findBinding-x name (car state)) 'null))   (findBinding-x name (car state))]
+                                           [(not (eq? (findBinding-x name (cdr state)) 'null))   (findBinding-x name (cdr state))]
+                                           [else                            (error name "variable used before declaration")]))]   
+      [(eq? (car (car state)) name) (if (null? (car (cdr (car state))))
+                                        (error name "cannot use variable before it is assigned a value/this will not return anything") 
+                                        (car (cdr (car state))))]
+      [else                            (findBinding-x name (cdr state))])))
+
+
 
 
 ; operator function
