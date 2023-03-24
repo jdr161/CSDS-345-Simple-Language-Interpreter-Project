@@ -69,7 +69,6 @@
       [(eq? (car (car layer)) name) (return (car (cdr (car layer))))]
       (else (findBindingInLayer-cc name (cdr layer) return)))))
 
-(findBinding 'x '(((a 2) (f 3))))
 
 ; operator function
 ;(> 10 20) basically the operator function gives the operator of the pair/list
@@ -261,7 +260,7 @@
 ;remove the top most la
 (define M_block
   (lambda (stmt state return break continue throw)
-    (removeLayer (M_state stmt (addLayer state) return break continue throw))))
+    (removeLayer (M_state (cdr stmt) (addLayer state) return break continue throw))))
 
 (define M_state
   (lambda (tree state return break continue throw)
@@ -275,7 +274,7 @@
       [(eq? 'break (getFirstStatementType tree))   (break state)]
       ;[(eq? 'throw (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_throw (getFirstStatement tree) state throw) return break continue throw)]
       ;[(eq? 'try (getFirstStatementType tree))     (M_state (getRestOfStatements tree) (M_try (getFirstStatement tree) state return break continue throw) return break continue throw)]
-      [(eq? 'begin (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_block (getFirstStatement tree) state return break continue throw) return break continue throw)]
+      [(eq? 'begin (getFirstStatementType tree))   (M_block (getFirstStatement tree) state return break continue throw)]
       [(eq? 'continue (getFirstStatementType tree))(continue state)]
       (else                           (error (getFirstStatementType tree) "unrecognized statement type")))))
   
@@ -289,7 +288,7 @@
     (findReturnVal (call/cc (lambda (return) (M_state(parser filename) (newState) return (lambda (v) error) (lambda (v) error) (lambda (v1) error))))))) ; () shows returns true for (null? '())
 
 (parser "test1.txt")
-;(interpret "test1.txt")
+(interpret "test1.txt")
 ;(interpret "t2.txt")
 ;(interpret "t3.txt")
 ;(interpret "t4.txt")
