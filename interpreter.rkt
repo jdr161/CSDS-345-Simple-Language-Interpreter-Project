@@ -5,42 +5,70 @@
 ;Maria Eradze
 ;Wendy Wu
 
+; helper function declared? finds if a given var name is in the state or not
+ (define declared-cc
+  (lambda (name state break)
+    (cond
+      [(null? state)                 #f]
+      [(null? (car state))           (declared-cc name (cdr state) break)]
+      [(list? (car (car state)))     (if (null? (cdr state)) ; case that state is a list of layers
+                                         (declared-cc name (car state) break)
+                                         (or (declared-cc name (car state) break) (declared-cc name (cdr state) break)))]
+      [(eq? (car (car state)) name)  (break #t)] ; case that state is a single layer
+      [else                          (declared-cc name (cdr state) break)])))
+(define declared?
+  (lambda (name state)
+     (call/cc
+      (lambda (k) (declared-cc name state k)))))
+
 ; addBinding takes a name, value, and a state
 ; adds that key-value pair to the state
 ; replaces any existing binding if one already exists with the same name
 ; returns the state
 (define addBinding
   (lambda (name val state)
+    (if (declared? name state)
+        (changeBinding name val state)
+        (cons (cons (list name val) (car state)) (cdr state)))))
+(define changeBinding
+  (lambda (name val state)
     (cond
-      [(eq? val 'true)                      (addBinding name #t state)]
-      [(eq? val 'false)                     (addBinding name #f state)]
-      [(null? state)                             (list(list name val))]
-      [(eq? (car (car state)) name) (cons (list name val) (cdr state))]
-      (else (cons (car state)       (addBinding name val (cdr state)))))))
+      [(null? state)       (error "something wrong with addBinding")]
+      [(null? (cdr state)) (list (changeBindingInLayer name val (car state)))]
+      (else                (cons (changeBindingInLayer name val (car state)) (changeBinding name val (cdr state)))))))
+(define changeBindingInLayer
+  (lambda (name val layer)
+    (cond
+      [(null? layer) '()]
+      [(eq? (car (car layer)) name) (cons (list name val) (cdr layer))]
+      (else (cons (car layer) (changeBindingInLayer name val (cdr layer)))))))
 
 ; findBinding takes a name and a state
 ; finds the binding with the correct name
 ; if not binding with the inputted name can be found
 ; throws an error using (error msg)
+; TODO: throws an error if the binding is null
 ; returns the value of the binding
 (define findBinding
   (lambda (name state)
     (cond
       [(eq? name 'true)             #t]
       [(eq? name 'false)            #f]
-      [(null? state)                (error name "variable used before declaration")]
-      [(eq? (car (car state)) name) (if (null? (car (cdr (car state))))
-                                        (error name "cannot use variable before it is assigned a value/this will not return anything") 
-                                        (car (cdr (car state))))]
-      (else                         (findBinding name (cdr state))))))
-
-; helper function declared? finds if a given var name is in the state or not
- (define declared?
-  (lambda (name state)
+      (else (call/cc (lambda (return)
+                       (findBinding-cc name state return)))))))
+(define findBinding-cc
+  (lambda (name state return)
     (cond
-      [(null? state)               #f]
-      [(eq? (car(car state)) name) #t]
-      [else (declared? name        (cdr state))])))
+      [(null? state)       (error name "variable used before declaration")]
+      [(null? (cdr state)) (findBindingInLayer-cc name (car state) return)]
+      (else                (cons (findBindingInLayer-cc name (car state) return) (findBinding-cc name (cdr state) return))))))
+(define findBindingInLayer-cc
+  (lambda (name layer return)
+    (cond
+      [(null? layer) '()]
+      [(eq? (car (car layer)) name) (return (car (cdr (car layer))))]
+      (else (findBindingInLayer-cc name (cdr layer) return)))))
+
 
 ; operator function
 ;(> 10 20) basically the operator function gives the operator of the pair/list
@@ -90,15 +118,12 @@
 ; newState returns a blank state, ready to pass into M_state
 (define newState
   (lambda ()
-    (list (list 'return null))))
+    (list (list))))
+;((return ()))
+;(())
+;'(((x 10)))
+;(((x 10) (y 20)))
 
-; findReturnVal finds the return value to return after everything else is done
-(define findReturnVal
-  (lambda (state)
-    (cond
-      [(eq? (findBinding 'return state) #t) 'true]
-      [(eq? (findBinding 'return state) #f) 'false]
-      (else         (findBinding 'return state)))))
 
 ; returnDefined? takes a state
 ; returns #t if return has been assigned a value
@@ -186,9 +211,7 @@
 ; returns the value of the expression
 (define M_return
   (lambda (statement state)
-    (if (returnDefined? state)
-        state
-        (addBinding 'return (M_value (leftoperand statement) state) state))))
+    (M_value (leftoperand statement) state)))
 
 ; M_if takes an if statement (in the form (if conditional then-statement optional-else-statement)) and a state
 ; evaluates the conditional and calls M_state on the correct statement as necessary
@@ -209,7 +232,7 @@
   (lambda (cstatements state return throw)
     (call/cc (lambda (break)     
       (cond
-        [(M_boolean (leftoperand cstatements) state) (M_while cstatements (M_state (cons (rightoperand cstatements) '())
+        [(M_boolean (leftoperand cstatements) state) (M_while cstatements (M_state cstatements (cons (rightoperand cstatements) '())
                                                                                    return ; return is the same
                                                                                    break  ; break will return a state the call/cc we just set up
                                                                                    (lambda (contState) (break (M_while cstatements contState return throw))) ; continue skips everything else in an iteration and directly begins the next iteration
@@ -221,18 +244,29 @@
 ; checks what kind of statement the first statement in the syntax tree is and calls the correct function on it
 ; recurses on itself with the the cdr of the syntax tree and the state returned from the the function called on the car of the syntax tree
 ; if the state is just a single value, returns that value
+(define removeLayer
+  (lambda (state)
+    (cdr state)))
+(define addLayer
+  (lambda (state)
+    (cons '() state)))
+;remove the top most la
+(define M_block
+  (lambda (stmt state return break continue throw)
+    (removeLayer (M_state (cdr stmt) (addLayer state) return break continue throw))))
+
 (define M_state
   (lambda (tree state return break continue throw)
     (cond
       [(null? tree)                                state]
       [(eq? 'var (getFirstStatementType tree))     (M_state (getRestOfStatements tree) (M_declaration (getFirstStatement tree) state) return break continue throw)]
       [(eq? '= (getFirstStatementType tree))       (M_state (getRestOfStatements tree) (M_assignment (getFirstStatement tree) state) return break continue throw)]
-      [(eq? 'return (getFirstStatementType tree))  (return (M_return (getFirstStatement tree) state))]
+      [(eq? 'return (getFirstStatementType tree))  (M_return (getFirstStatement tree) state)]
       [(eq? 'if (getFirstStatementType tree))      (M_state (getRestOfStatements tree) (M_if (getFirstStatement tree) state return break continue throw) return break continue throw)]
-      [(eq? 'while (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_while (getFirstStatement tree) state return throw) return break continue throw)]
+      [(eq? 'while (getFirstStatementType tree))   (M_while (getFirstStatement tree) state return throw)]
       [(eq? 'break (getFirstStatementType tree))   (break state)]
-      [(eq? 'throw (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_throw (getFirstStatement tree) state throw) return break continue throw)]
-      [(eq? 'try (getFirstStatementType tree))     (M_state (getRestOfStatements tree) (M_try (getFirstStatement tree) state return break continue throw) return break continue throw)]
+      ;[(eq? 'throw (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_throw (getFirstStatement tree) state throw) return break continue throw)]
+      ;[(eq? 'try (getFirstStatementType tree))     (M_state (getRestOfStatements tree) (M_try (getFirstStatement tree) state return break continue throw) return break continue throw)]
       [(eq? 'begin (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_block (getFirstStatement tree) state return break continue throw) return break continue throw)]
       [(eq? 'continue (getFirstStatementType tree))(continue state)]
       (else                           (error (getFirstStatementType tree) "unrecognized statement type")))))
@@ -244,13 +278,12 @@
 ; returns the return value from that syntax tree
 (define interpret
   (lambda (filename)
-    (findReturnVal (call/cc (lambda (return) (M_state(parser filename) (newState) return (error "continue used outside of while loop") (error "throw used outside of catch statement"))))))) ; () shows returns true for (null? '())
+    (call/cc (lambda (return) (M_state(parser filename) (newState) return (lambda (v) error) (lambda (v) error) (lambda (v1) error)))))) ; () shows returns true for (null? '())
 
-;(parser "fix1test.txt")
-;(interpret "fix1test.txt")
-;(interpret "t1.txt")
-;(interpret "t2.txt")
-;(interpret "t3.txt")
+(parser "test1.txt")
+(interpret "test1.txt")
+;(interpret "test2.txt")
+;(interpret "test3.txt")
 ;(interpret "t4.txt")
 ;(interpret "t5.txt")
 ;(interpret "t6.txt")
