@@ -124,13 +124,6 @@
 ;'(((x 10)))
 ;(((x 10) (y 20)))
 
-; findReturnVal finds the return value to return after everything else is done
-(define findReturnVal
-  (lambda (state)
-    (cond
-      [(eq? (findBinding 'return state) #t) 'true]
-      [(eq? (findBinding 'return state) #f) 'false]
-      (else         (findBinding 'return state)))))
 
 ; returnDefined? takes a state
 ; returns #t if return has been assigned a value
@@ -268,7 +261,7 @@
       [(null? tree)                                state]
       [(eq? 'var (getFirstStatementType tree))     (M_state (getRestOfStatements tree) (M_declaration (getFirstStatement tree) state) return break continue throw)]
       [(eq? '= (getFirstStatementType tree))       (M_state (getRestOfStatements tree) (M_assignment (getFirstStatement tree) state) return break continue throw)]
-      [(eq? 'return (getFirstStatementType tree))  (return (M_return (getFirstStatement tree) state))]
+      [(eq? 'return (getFirstStatementType tree))  (M_return (getFirstStatement tree) state)]
       [(eq? 'if (getFirstStatementType tree))      (M_state (getRestOfStatements tree) (M_if (getFirstStatement tree) state return break continue throw) return break continue throw)]
       [(eq? 'while (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_while (getFirstStatement tree) state return throw) return break continue throw)]
       [(eq? 'break (getFirstStatementType tree))   (break state)]
@@ -285,7 +278,7 @@
 ; returns the return value from that syntax tree
 (define interpret
   (lambda (filename)
-    (findReturnVal (call/cc (lambda (return) (M_state(parser filename) (newState) return (lambda (v) error) (lambda (v) error) (lambda (v1) error))))))) ; () shows returns true for (null? '())
+    (call/cc (lambda (return) (M_state(parser filename) (newState) return (lambda (v) error) (lambda (v) error) (lambda (v1) error)))))) ; () shows returns true for (null? '())
 
 (parser "test1.txt")
 (interpret "test1.txt")
