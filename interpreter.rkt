@@ -67,7 +67,7 @@
     (cond
       [(null? layer) '()]
       [(eq? (car (car layer)) name) (return (car (cdr (car layer))))]
-      (else (cons (car layer) (findBindingInLayer-cc name (cdr layer) return))))))
+      (else (findBindingInLayer-cc name (cdr layer) return)))))
 
 (findBinding 'x '(((a 2) (f 3))))
 
@@ -219,7 +219,7 @@
 ; returns the value of the expression
 (define M_return
   (lambda (statement state)
-    (addBinding 'return (M_value (leftoperand statement) state) state)))
+    (M_value (leftoperand statement) state)))
 
 ; M_if takes an if statement (in the form (if conditional then-statement optional-else-statement)) and a state
 ; evaluates the conditional and calls M_state on the correct statement as necessary
