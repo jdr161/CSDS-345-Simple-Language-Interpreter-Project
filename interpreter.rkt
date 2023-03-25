@@ -292,7 +292,7 @@
                                 (lambda (e-val state) (return-try (M_block (getFinallyBlock stmt)
                                                                            (removeLayer (M_state ; we call M_state because we create the new layer when we call addBinding on e
                                                                                          (getCatchStmts stmt throw e-val state) ; getCatchStmts throws the error up a level if there is no catch
-                                                                                         (addBinding (getCatchErrorName stmt) e-val (addLayer state))
+                                                                                         (addBinding (getCatchErrorName stmt) e-val state)
                                                                                          return
                                                                                          (lambda (state-new) (break (removeLayer state-new)))
                                                                                          (lambda (state-new) (continue (removeLayer state-new)))
@@ -336,7 +336,7 @@
   (lambda (filename)
     (call/cc (lambda (return) (M_state(parser filename) (newState) return (lambda (v) error) (lambda (v) error) (lambda (v1) error)))))) ; () shows returns true for (null? '())
 
-;(parser "test16.txt")
+(parser "test17.txt")
 ;(parser "test1.txt")
 ;(interpret "test1.txt") ; expected: 20
 ;(interpret "test2.txt") ; expected: 164
