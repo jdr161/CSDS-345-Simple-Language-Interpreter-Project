@@ -334,9 +334,14 @@
 ; returns the return value from that syntax tree
 (define interpret
   (lambda (filename)
-    (call/cc (lambda (return) (M_state(parser filename) (newState) return (lambda (v) error) (lambda (v) error) (lambda (v1) error)))))) ; () shows returns true for (null? '())
+    (call/cc (lambda (return) (M_state (parser filename)
+                                       (newState)
+                                       return
+                                       (lambda (state) (error "break used outside loop"))
+                                       (lambda (state) (error "continue used outside loop"))
+                                       (lambda (e-val state) (error "uncaught error")))))))
 
-(parser "test17.txt")
+(parser "test19.txt")
 ;(parser "test1.txt")
 ;(interpret "test1.txt") ; expected: 20
 ;(interpret "test2.txt") ; expected: 164
@@ -354,9 +359,9 @@
 ;(interpret "test14.txt") ; expected: 12
 ;(interpret "test15.txt") ; expected: 125
 ;(interpret "test16.txt") ; expected: 110
-;(interpret "test17.txt") ; expected: 2000400      (failed, returned error i: variable name is already taken)
+;(interpret "test17.txt") ; expected: 2000400 
 ;(interpret "test18.txt") ; expected: 101
-;(interpret "test19.txt") ; expected: error          (failed, returned arity mismatch, expected: 1, given 2 at throw e-val-new state-new in M_try)
+;(interpret "test19.txt") ; expected: error       
 ;(interpret "test20.txt") ; expected: ??
 ;(interpret "test21.txt") ; expected: ??
 ;(interpret "test22.txt") ; expected: ??
