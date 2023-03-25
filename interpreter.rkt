@@ -10,12 +10,12 @@
   (lambda (name state break)
     (cond
       [(null? state)                 #f]
-      [(null? (car state))           (declared-cc name (cdr state) break)]
-      [(list? (car (car state)))     (if (null? (cdr state)) ; case that state is a list of layers
-                                         (declared-cc name (car state) break)
-                                         (or (declared-cc name (car state) break) (declared-cc name (cdr state) break)))]
-      [(eq? (car (car state)) name)  (break #t)] ; case that state is a single layer
-      [else                          (declared-cc name (cdr state) break)])))
+      [(null? (getFirstStatement state))           (declared-cc name (getRestOfStatements state) break)]
+      [(list? (getFirstStatementType state))     (if (null? (getRestOfStatements state)) ; case that state is a list of layers
+                                         (declared-cc name (getFirstStatement state) break)
+                                         (or (declared-cc name (getFirstStatement state) break) (declared-cc name (getRestOfStatements state) break)))]
+      [(eq? (getFirstStatementType state) name)  (break #t)] ; case that state is a single layer
+      [else                          (declared-cc name (getRestOfStatements state) break)])))
 (define declared?
   (lambda (name state)
      (call/cc
@@ -29,19 +29,19 @@
   (lambda (name val state)
     (if (declared? name state)
         (changeBinding name val state)
-        (cons (cons (list name val) (car state)) (cdr state)))))
+        (cons (cons (list name val) (getFirstStatement state)) (getRestOfStatements state)))))
 (define changeBinding
   (lambda (name val state)
     (cond
-      [(null? state)       (error "something wrong with addBinding")]
-      [(null? (cdr state)) (list (changeBindingInLayer name val (car state)))]
-      (else                (cons (changeBindingInLayer name val (car state)) (changeBinding name val (cdr state)))))))
+      [(null? state)                        (error "something wrong with addBinding")]
+      [(null? (getRestOfStatements state))     (list (changeBindingInLayer name val (getFirstStatement state)))]
+      (else          (cons (changeBindingInLayer name val (getFirstStatement state)) (changeBinding name val (getRestOfStatements state)))))))
 (define changeBindingInLayer
   (lambda (name val layer)
     (cond
       [(null? layer) '()]
-      [(eq? (car (car layer)) name) (cons (list name val) (cdr layer))]
-      (else (cons (car layer) (changeBindingInLayer name val (cdr layer)))))))
+      [(eq? (getFirstStatementType layer) name)      (cons (list name val) (getRestOfStatements layer))]
+      (else (cons (getFirstStatement layer)          (changeBindingInLayer name val (getRestOfStatements layer)))))))
 
 ; findBinding takes a name and a state
 ; finds the binding with the correct name
@@ -55,24 +55,31 @@
       [(eq? name 'false)            #f]
       (else (call/cc (lambda (return)
                        (findBinding-cc name state return))))))) 
+;findBinding-cc delegates the findingBinding operation in layers
 (define findBinding-cc
   (lambda (name state return)
     (cond
       [(null? state)       state]
-      [(null? (cdr state)) (findBindingInLayer-cc name (car state) return)]
-      [(and (null? (findBindingInLayer-cc name (car state) return)) (null? (findBinding-cc name (cdr state) return))) (error "variable used before declaration")]
-      ;the above means that the code can't find the corresponding named variable
-      [else (call/cc (lambda (return) (or (findBindingInLayer-cc name (car state) return) (findBinding-cc name (cdr state) return))))])))
+      [(null? (getRestOfStatements state)) (findBindingInLayer-cc name (getFirstStatement state) return)]
+      [(and (null? (findBindingInLayer-cc name (getFirstStatement state) return)) (null? (findBinding-cc name (getRestOfStatements state) return)))
+                   (error "variable used before declaration")];means that the code can't find the corresponding named variable from any layer 
+      [else (call/cc (lambda (return) (or (findBindingInLayer-cc name (getFirstStatement state) return) (findBinding-cc name (getRestOfStatements state) return))))])))
 ;the above else means once we find the value of the named variable we immediately return it (since we are assume every var is named differently
 ;only one place will have it and therefore we use an or
 
+;findBindingInLayer find Binding value of a named variable in a single layer (traverse through pairs in the layer)
 (define findBindingInLayer-cc
   (lambda (name layer return) ;layer is initially ((k 8) (x 7))
     (cond
       [(null? layer) layer]
-      [(eq? (car (car layer)) name) (return (car (cdr (car layer))))]
-      (else (findBindingInLayer-cc name (cdr layer) return)))))
-;'(((x 3) (y 7))  ((k 9) (q 6)))
+      [(eq? (getFirstStatementType layer) name) (return (bindingVal layer))]
+      (else (findBindingInLayer-cc name (getRestOfStatements layer) return)))))
+
+;bindingVal returns the ((x 10)) value 10 from this binding pair
+(define bindingVal
+  (lambda (expression)
+    (car (cdr (car expression)))))
+
 ; operator function
 ;(> 10 20) basically the operator function gives the operator of the pair/list
 (define operator
@@ -216,6 +223,7 @@
 ; M_while takes a while statement (in the form 	(while conditional body-statement)) and a state
 ; recurses if the conditional returns true
 ; returns the state if the conditional returns false
+;implemented call/cc in case of break from M_state and continue in case of continue in M_state
 (define M_while
   (lambda (cstatements state return throw)
     (call/cc (lambda (break)     
@@ -230,46 +238,48 @@
         ;while the condition is true, we will continue running the body statement and update the state using M_while
         (else                                         state)))))) ;if returned false then just return the state
 
-; M_state takes a syntax tree and a state
-; checks what kind of statement the first statement in the syntax tree is and calls the correct function on it
-; recurses on itself with the the cdr of the syntax tree and the state returned from the the function called on the car of the syntax tree
-; if the state is just a single value, returns that value
 
-
+;removeLayer removes the car of the state, or the top layer of the state
 (define removeLayer
   (lambda (state)
     (cdr state)))
+;addLayer add a single layer in '() to the state
 (define addLayer
   (lambda (state)
     (cons '() state)))
-;remove the top most la
+;M_block takes care of any code in block form that starts with 'begin
+;first delegate the code within the block to M_state and update the state with added layer, then deletes the layer after updated layer
 (define M_block
   (lambda (stmt state return break continue throw)
-    (removeLayer (M_state (cdr stmt) (addLayer state) return break continue throw))))
+    (removeLayer (M_state (getRestOfStatements stmt) (addLayer state) return break continue throw))))
 
+;M_throw throws an error e to the state
 (define M_throw
   (lambda (state e throw)
     (throw (M_value e state) state)))
 
-
+;getTryBlock gets the body of the try block (try body ....)
 (define getTryBlock
   (lambda (tryStmt)
     (cons 'begin (car (cdr tryStmt)))))
+;getFinallyBlock gets the body of the finally block (try body () (finally body))
 (define getFinallyBlock
   (lambda (tryStmt)
     (if (null? (car (cdr (cdr (cdr tryStmt)))))
-        '(begin)
-        (cons 'begin (car (cdr (car (cdr (cdr (cdr tryStmt))))))))))
+        '(begin)  ;just { }
+        (cons 'begin (car (cdr (car (cdr (cdr (cdr tryStmt)))))))))) ;{ some code }
+;getCatchStmts gets the body of the Catch block (try body (catch (e) body) (finally body))
 (define getCatchStmts
   (lambda (tryStmt throw e-val state)
     (if (null? (car (cdr (cdr tryStmt))))
         (throw e-val state) ; if catch is completely empty, throw the error up a level: (try (body) () (finally (body))) => throw error to one level up
-        (car (cdr (cdr (car (cdr (cdr tryStmt)))))))))
+        (car (cdr (cdr (car (cdr (cdr tryStmt))))))))) ;'(try (body) (catch (e) (body)) (finally (body))) when we can get catch's body
+;getCatchErrorName gets the error name e from (try body (catch (e) body) (finally body))
 (define getCatchErrorName
   (lambda (tryStmt)
-    (car (car (cdr (car (cdr (cdr tryStmt))))))))
+    (car (car (cdr (car (cdr (cdr tryStmt))))))))  ; get the e from (catch (e) body)
 
-
+;M_try takes care of a try-catch-finally block and correctly updates the state no matter the structure of the block
 (define M_try
   (lambda (stmt state return break continue throw)
     (call/cc (lambda (return-try)
@@ -296,6 +306,11 @@
                continue
                throw)))))
     
+; M_state takes a syntax tree and a state
+; checks what kind of statement the first statement in the syntax tree is and calls the correct function on it
+; recurses on itself with the the cdr of the syntax tree and the state returned from the the function called on the car of the syntax tree
+; if the state is just a single value, returns that value
+
 (define M_state
   (lambda (tree state return break continue throw)
     (cond
@@ -347,7 +362,6 @@
 ;(interpret "test22.txt") ; expected: ??
 ;(interpret "test23.txt") ; expected: ??
 ;(interpret "test24.txt") ; expected: ??
-
 ; to catch errors we make: (with-handlers ([exn:fail? (lambda (exn) 'air-bag)])
 ;                                 (error "crash!"))
 
