@@ -54,21 +54,25 @@
       [(eq? name 'true)             #t]
       [(eq? name 'false)            #f]
       (else (call/cc (lambda (return)
-                       (findBinding-cc name state return)))))))
+                       (findBinding-cc name state return))))))) 
 (define findBinding-cc
   (lambda (name state return)
     (cond
-      [(null? state)       (error name "variable used before declaration")]
+      [(null? state)       state]
       [(null? (cdr state)) (findBindingInLayer-cc name (car state) return)]
-      (else                (cons (findBindingInLayer-cc name (car state) return) (findBinding-cc name (cdr state) return))))))
+      [(and (null? (findBindingInLayer-cc name (car state) return)) (null? (findBinding-cc name (cdr state) return))) (error "variable used before declaration")]
+      ;the above means that the code can't find the corresponding named variable
+      [else (call/cc (lambda (return) (or (findBindingInLayer-cc name (car state) return) (findBinding-cc name (cdr state) return))))])))
+;the above else means once we find the value of the named variable we immediately return it (since we are assume every var is named differently
+;only one place will have it and therefore we use an or
+
 (define findBindingInLayer-cc
-  (lambda (name layer return)
+  (lambda (name layer return) ;layer is initially ((k 8) (x 7))
     (cond
       [(null? layer) layer]
       [(eq? (car (car layer)) name) (return (car (cdr (car layer))))]
       (else (findBindingInLayer-cc name (cdr layer) return)))))
-
-
+;'(((x 3) (y 7))  ((k 9) (q 6)))
 ; operator function
 ;(> 10 20) basically the operator function gives the operator of the pair/list
 (define operator
@@ -301,7 +305,7 @@
       [(eq? 'return (getFirstStatementType tree))  (return (M_return (getFirstStatement tree) state))]
       [(eq? 'if (getFirstStatementType tree))      (M_state (getRestOfStatements tree) (M_if (getFirstStatement tree) state return break continue throw) return break continue throw)]
       [(eq? 'while (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_while (getFirstStatement tree) state return throw) return break continue throw)]
-      [(eq? 'break (getFirstStatementType tree))   (break state)]
+      [(eq? 'break (getFirstStatementType tree))   (break (removeLayer state))] ;if you break out of a while loop, you have the remove the top most layer wiht variables declared inside it
       [(eq? 'throw (getFirstStatementType tree))   (M_throw state (leftoperand (getFirstStatement tree)) throw)]
       [(eq? 'try (getFirstStatementType tree))     (M_state (getRestOfStatements tree) (M_try (getFirstStatement tree) state return break continue throw) return break continue throw)]
       [(eq? 'begin (getFirstStatementType tree))   (M_state (getRestOfStatements tree) (M_block (getFirstStatement tree) state return break continue throw) return break continue throw)]
@@ -319,17 +323,17 @@
 
 ;(parser "test16.txt")
 ;(parser "test1.txt")
-;(interpret "test1.txt") ; expected: 20     
-;(interpret "test2.txt") ; expected: 164       
+;(interpret "test1.txt") ; expected: 20
+;(interpret "test2.txt") ; expected: 164
 ;(interpret "test3.txt") ; expected: 32
 ;(interpret "test4.txt") ; expected: 2
-;(interpret "test5.txt") ; expected: error        (failed, returned '())
+;(interpret "test5.txt") ; expected: error        
 ;(interpret "test6.txt") ; expected: 25
 ;(interpret "test7.txt") ; expected: 21
 ;(interpret "test8.txt") ; expected: 6
 ;(interpret "test9.txt") ; expected: -1
 ;(interpret "test10.txt") ; expected: 789
-(interpret "test11.txt") ; expected: error       (failed, returned -1)
+;(interpret "test11.txt") ; expected: error       
 ;(interpret "test12.txt") ; expected: error
 ;(interpret "test13.txt") ; expected: error
 ;(interpret "test14.txt") ; expected: 12
