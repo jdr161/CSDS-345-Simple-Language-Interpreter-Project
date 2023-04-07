@@ -26,7 +26,8 @@
 
 ;TODO
 (define call-main
-  (lambda (environment)
+  (lambda (environment)))
+
     
 
 ; outer layer function that declares variables and functions
@@ -40,7 +41,7 @@
 (define interpret-statement-outer
   (lambda (statement environment)
     (cond
-      ((eq? 'var (statement-type statement)) ()) ;TODO: declare a global variable
+      ((eq? 'var (statement-type statement)) (interpret-declare statement environment))
       ((eq? 'function (statement-type statement)) ()) ;TODO: interpret-function-declaration
       (else (myerror "Unknown statement:" (statement-type statement))))))
 
