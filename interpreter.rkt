@@ -4,6 +4,12 @@
 (require "simpleParser.rkt")
 ; (load "simpleParser.scm")
 
+; TODO:
+; (create-function-environment )
+; (interpret-function )
+; make M_value deal with function call as expression
+; make M_state deal with function call as expression
+
 
 ; An interpreter for the simple language that uses call/cc for the continuations.  Does not handle side effects.
 (define call/cc call-with-current-continuation)
@@ -16,20 +22,18 @@
 (define interpret
   (lambda (file)
     (scheme->language
-     (call/cc
-      (lambda (return)
-        (call-main (interpret-statement-list-outer (parser file) (newenvironment))))))))
-        ;(interpret-statement-list (parser file) (newenvironment) return
-         ;                         (lambda (env) (myerror "Break used outside of loop"))
-          ;                        (lambda (env) (myerror "Continue used outside of loop"))
-           ;                       (lambda (v env) (myerror "Uncaught exception thrown"))))))))
+      (call-main (interpret-statement-list-outer (parser file) (newenvironment))))))
 
-;TODO
+; looks up the main method and calls it
 (define call-main
-  (lambda (environment)))
-
+  (lambda (environment)
+    (call/cc
+     (lambda (return)
+       (interpret-function (lookup 'main) environment return
+                           (lambda (env) (myerror"Break used outside of loop"))
+                           (lambda (env) (myerror "Continue used outside of loop"))
+                           (lambda (v env) (myerror "Uncaught exception thrown")))))))
     
-
 ; outer layer function that declares variables and functions
 (define interpret-statement-list-outer
   (lambda (statement-list environment)
@@ -42,8 +46,18 @@
   (lambda (statement environment)
     (cond
       ((eq? 'var (statement-type statement)) (interpret-declare statement environment))
-      ((eq? 'function (statement-type statement)) ()) ;TODO: interpret-function-declaration
+      ((eq? 'function (statement-type statement)) (interpret-function-declaration statement environment))
       (else (myerror "Unknown statement:" (statement-type statement))))))
+
+; adds the function to the state
+(define interpret-function-declaration
+  (lambda (statement environment)
+    (insert (get-function-name statement) (make-closure (get-formal-params statement) (get-function-body statement) environment))))
+
+; creates the function closure for a given set of formal parameters, function body, and environment
+(define make-closure
+  (lambda (formal-params function-body environment)
+    (list formal-params function-body (lambda (new-environment) (create-function-environment function-body environment new-environment)))))
 
 ; interprets a list of statements.  The environment from each statement is used for the next ones.
 (define interpret-statement-list
@@ -248,6 +262,9 @@
 (define get-try operand1)
 (define get-catch operand2)
 (define get-finally operand3)
+(define get-function-name operator)
+(define get-formal-params operand1)
+(define get-function-body operand2)
 
 (define catch-var
   (lambda (catch-statement)
@@ -358,7 +375,7 @@
 ; Add a new variable/value pair to the frame.
 (define add-to-frame
   (lambda (var val frame)
-    (list (cons var (variables frame)) (cons (scheme->language (box val)) (store frame)))))
+    (list (cons var (variables frame)) (cons (box (scheme->language val)) (store frame)))))
 
 ; Changes the binding of a variable in the environment to a new value
 (define update-existing
