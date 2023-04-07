@@ -18,10 +18,31 @@
     (scheme->language
      (call/cc
       (lambda (return)
-        (interpret-statement-list (parser file) (newenvironment) return
-                                  (lambda (env) (myerror "Break used outside of loop"))
-                                  (lambda (env) (myerror "Continue used outside of loop"))
-                                  (lambda (v env) (myerror "Uncaught exception thrown"))))))))
+        (call-main (interpret-statement-list-outer (parser file) (newenvironment))))))))
+        ;(interpret-statement-list (parser file) (newenvironment) return
+         ;                         (lambda (env) (myerror "Break used outside of loop"))
+          ;                        (lambda (env) (myerror "Continue used outside of loop"))
+           ;                       (lambda (v env) (myerror "Uncaught exception thrown"))))))))
+
+;TODO
+(define call-main
+  (lambda (environment)
+    
+
+; outer layer function that declares variables and functions
+(define interpret-statement-list-outer
+  (lambda (statement-list environment)
+    (if (null? statement-list)
+        environment
+        (interpret-statement-list-outer (cdr statement-list) (interpret-statement (car statement-list) environment)))))
+
+; helper function for outer layer function. 
+(define interpret-statement-outer
+  (lambda (statement environment)
+    (cond
+      ((eq? 'var (statement-type statement)) ()) ;TODO: declare a global variable
+      ((eq? 'function (statement-type statement)) ()) ;TODO: interpret-function-declaration
+      (else (myerror "Unknown statement:" (statement-type statement))))))
 
 ; interprets a list of statements.  The environment from each statement is used for the next ones.
 (define interpret-statement-list
