@@ -48,6 +48,11 @@
       ((eq? 'var (statement-type statement)) (interpret-declare statement environment))
       ((eq? 'function (statement-type statement)) (interpret-function-declaration statement environment))
       (else (myerror "Unknown statement:" (statement-type statement))))))
+; create-function-environment: a function that takes a state as input and returns the
+; environment of bindings active in the function body/defined function.
+; note: in the implementation, dont need the function really.
+; any value that lets us recreate the enviro for the function execution is valid
+;strip away anything that shouldn't be in the function from the state
 
 ; adds the function to the state
 (define interpret-function-declaration
