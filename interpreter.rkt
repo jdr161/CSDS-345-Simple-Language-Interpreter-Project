@@ -104,7 +104,7 @@
   (lambda (statement environment)
     (update (get-assign-lhs statement) (eval-expression (get-assign-rhs statement) environment) environment)))
 
-; We need to check if there is an else condition.  Otherwise, we evaluate the expression and do the right thing.
+; We need to check if there is an else conditenvironion.  Otherwise, we evaluate the expression and do the right thing.
 (define interpret-if
   (lambda (statement environment return break continue throw)
     (cond
@@ -128,7 +128,7 @@
   (lambda (statement environment return break continue throw)
     (pop-frame (interpret-statement-list (cdr statement)
                                          (push-frame environment)
-                                         return
+                                         returnin
                                          (lambda (env) (break (pop-frame env)))
                                          (lambda (env) (continue (pop-frame env)))
                                          (lambda (v env) (throw v (pop-frame env)))))))
@@ -267,9 +267,9 @@
 (define get-try operand1)
 (define get-catch operand2)
 (define get-finally operand3)
-(define get-function-name operator)
-(define get-formal-params operand1)
-(define get-function-body operand2)
+(define get-function-name operand1)
+(define get-formal-params operand2)
+(define get-function-body operand3)
 
 (define catch-var
   (lambda (catch-statement)
