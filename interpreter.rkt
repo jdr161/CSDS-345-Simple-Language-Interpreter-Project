@@ -1,14 +1,13 @@
 ; If you are using scheme instead of racket, comment these two lines, uncomment the (load "simpleParser.scm") and comment the (require "simpleParser.rkt")
 #lang racket
-;(require "functionParser.rkt")
-(require "simpleParser.rkt")
+(require "functionParser.rkt")
+;(require "simpleParser.rkt")
 ; (load "simpleParser.scm")
 
 ; TODO:
-; (create-function-environment )
-; (interpret-function )
+; Make sure our shortcut of just returning the function-definition-environment doesn't bite us later
 ; make M_value deal with function call as expression
-; make M_state deal with function call as expression
+; make M_state deal with function call as statement
 
 
 ; An interpreter for the simple language that uses call/cc for the continuations.  Does not handle side effects.
@@ -29,17 +28,14 @@
   (lambda (environment)
     (call/cc
      (lambda (return)
-       (interpret-function (lookup 'main) environment return
-                           (lambda (env) (myerror"Break used outside of loop"))
-                           (lambda (env) (myerror "Continue used outside of loop"))
-                           (lambda (v env) (myerror "Uncaught exception thrown")))))))
+       (interpret-function (lookup 'main environment) environment (lambda (v env) (myerror "Uncaught exception thrown")))))))
     
 ; outer layer function that declares variables and functions
 (define interpret-statement-list-outer
   (lambda (statement-list environment)
     (if (null? statement-list)
         environment
-        (interpret-statement-list-outer (cdr statement-list) (interpret-statement (car statement-list) environment)))))
+        (interpret-statement-list-outer (cdr statement-list) (interpret-statement-outer (car statement-list) environment)))))
 
 ; helper function for outer layer function. 
 (define interpret-statement-outer
@@ -57,12 +53,12 @@
 ; adds the function to the state
 (define interpret-function-declaration
   (lambda (statement environment)
-    (insert (get-function-name statement) (make-closure (get-formal-params statement) (get-function-body statement) environment))))
+    (insert (get-function-name statement) (make-closure (get-function-name statement) (get-formal-params statement) (get-function-body statement) environment) environment)))
 
 ; creates the function closure for a given set of formal parameters, function body, and environment
 (define make-closure
-  (lambda (formal-params function-body environment)
-    (list formal-params function-body (lambda (new-environment) (create-function-environment function-body environment new-environment)))))
+  (lambda (func-name formal-params function-body environment)
+    (list formal-params function-body (lambda (func-call-env) (insert func-name (lookup func-name func-call-env) environment)))))
 
 ; interprets a list of statements.  The environment from each statement is used for the next ones.
 (define interpret-statement-list
@@ -75,6 +71,7 @@
 (define interpret-statement
   (lambda (statement environment return break continue throw)
     (cond
+      ((eq? 'funcall (statement-type statement)) (interpret-function statement environment throw))
       ((eq? 'return (statement-type statement)) (interpret-return statement environment return))
       ((eq? 'var (statement-type statement)) (interpret-declare statement environment))
       ((eq? '= (statement-type statement)) (interpret-assign statement environment))
@@ -86,6 +83,28 @@
       ((eq? 'throw (statement-type statement)) (interpret-throw statement environment throw))
       ((eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw))
       (else (myerror "Unknown statement:" (statement-type statement))))))
+
+; TODO: add comment
+(define interpret-function
+  (lambda (statement environment throw)
+    (call/cc
+     (lambda (return)
+       (let* ((closure (lookup (get-function-name statement) environment))
+              (func-env (addParams (get-formal-params-from-closure closure) (get-actual-params statement) (push-frame (call-make-env-from-closure closure environment)) environment)))
+         (interpret-statement-list (get-body-from-closure closure) func-env return
+                                   (lambda (env) (myerror "Break used outside of loop"))
+                                   (lambda (env) (myerror "Continue used outside of loop"))
+                                   throw))))))
+
+; TODO: add comment
+(define addParams
+  (lambda (formal-params actual-params fstate environment)
+    (if (null? formal-params)
+        fstate
+        (addParams (cdr formal-params)
+                   (cdr actual-params)
+                   (insert (car formal-params) (eval-expression (car actual-params) environment) fstate)
+                   environment))))
 
 ; Calls the return continuation with the given expression value
 (define interpret-return
@@ -128,7 +147,7 @@
   (lambda (statement environment return break continue throw)
     (pop-frame (interpret-statement-list (cdr statement)
                                          (push-frame environment)
-                                         returnin
+                                         return
                                          (lambda (env) (break (pop-frame env)))
                                          (lambda (env) (continue (pop-frame env)))
                                          (lambda (v env) (throw v (pop-frame env)))))))
@@ -210,6 +229,7 @@
 (define eval-binary-op2
   (lambda (expr op1value environment)
     (cond
+      ((eq? 'funcall (operator expr)) (interpret-function expr environment (lambda (v env) (myerror "Uncaught exception thrown")))) ; TODO: Throw continuation passed to here?
       ((eq? '+ (operator expr)) (+ op1value (eval-expression (operand2 expr) environment)))
       ((eq? '- (operator expr)) (- op1value (eval-expression (operand2 expr) environment)))
       ((eq? '* (operator expr)) (* op1value (eval-expression (operand2 expr) environment)))
@@ -270,6 +290,10 @@
 (define get-function-name operand1)
 (define get-formal-params operand2)
 (define get-function-body operand3)
+(define get-formal-params-from-closure car)
+(define get-actual-params cddr)
+(define call-make-env-from-closure (lambda (closure environment) ((caddr closure) environment)))
+(define get-body-from-closure operand1)
 
 (define catch-var
   (lambda (catch-statement)
