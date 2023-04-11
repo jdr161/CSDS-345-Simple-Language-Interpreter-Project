@@ -72,7 +72,7 @@
   (lambda (statement environment return break continue throw)
     (cond
       ((eq? 'function (statement-type statement)) (interpret-declare statement environment throw))
-      ((eq? 'funcall (statement-type statement)) (interpret-function statement environment throw))
+      ((eq? 'funcall (statement-type statement)) (begin (interpret-function statement environment throw) environment))
       ((eq? 'return (statement-type statement)) (interpret-return statement environment return throw))
       ((eq? 'var (statement-type statement)) (interpret-declare statement environment throw))
       ((eq? '= (statement-type statement)) (interpret-assign statement environment throw))
@@ -478,8 +478,8 @@
 ;(interpret "test7.txt") ;-> returns 'true correctly
 ;(interpret "test8.txt") ;-> returns 20 correctly
 ;(interpret "test9.txt") ;-> returns 24 correctly
-;(interpret "test10.txt") ; FAILS -> contract violation
-;(interpret "test11.txt") ; FAILS -> error: undefined variable sety
+;(interpret "test10.txt") ;-> returns 2 correctly
+;(interpret "test11.txt") ; -> returns 35 correctly
 ;(interpret "test12.txt") ; -> returns parameter mismatch error correctly
 ;(interpret "test13.txt") ; FAILS -> contract violation
 ;(interpret "test14.txt") ; FAILS -> contract violation
