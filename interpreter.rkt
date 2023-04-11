@@ -60,7 +60,7 @@
 ; creates the function closure for a given set of formal parameters, function body, and environment
 (define make-closure
   (lambda (func-name formal-params function-body environment)
-    (list formal-params function-body (lambda (func-call-env) (insert func-name (lookup func-name func-call-env) environment)))))
+    (list formal-params function-body (lambda (func-call-env) (insert func-name (lookup func-name func-call-env) (push-frame environment)))))) ;PUSH FRAME HERE?
 
 ; interprets a list of statements.  The environment from each statement is used for the next ones.
 (define interpret-statement-list
@@ -93,7 +93,7 @@
     (call/cc
      (lambda (return)
        (let* ((closure (lookup (get-function-name statement) environment))
-              (func-env (addParams (get-formal-params-from-closure closure) (get-actual-params statement) (push-frame (call-make-env-from-closure closure environment)) environment throw)))
+              (func-env (addParams (get-formal-params-from-closure closure) (get-actual-params statement) (call-make-env-from-closure closure environment) environment throw)))
          (if (eq? (length (get-formal-params-from-closure closure)) (length (get-actual-params statement)))
              (interpret-statement-list (get-body-from-closure closure) func-env return
                                        (lambda (env) (myerror "Break used outside of loop"))
@@ -174,7 +174,7 @@
       ((not (eq? 'catch (statement-type catch-statement))) (myerror "Incorrect catch statement"))
       (else (lambda (ex env)
               (jump (interpret-block finally-block
-                                     (pop-frame (interpret-statement-list 
+                                     (pop-frame (interpret-statement-list
                                                  (get-body catch-statement) 
                                                  (insert (catch-var catch-statement) ex (push-frame env))
                                                  return 
@@ -489,5 +489,5 @@
 ;(interpret "test16.txt") ;-> returns 64 correctly
 ;(interpret "test17.txt") ;-> returns error: variable used but not defined: b correctly
 ;(interpret "test18.txt") ;-> returns 125 correctly
-(interpret "test19.txt") ; FAILS -> error: variable used but not defined: x
+;(interpret "test19.txt") ; FAILS -> error: variable used but not defined: x
 ;(interpret "test20.txt") ; FAILS -> error: undefined variable x
