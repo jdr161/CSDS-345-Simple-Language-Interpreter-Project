@@ -71,7 +71,7 @@
 (define interpret-statement
   (lambda (statement environment return break continue throw)
     (cond
-      ((eq? 'function (statement-type statement)) (interpret-declare statement environment throw))
+      ((eq? 'function (statement-type statement)) (interpret-function-declaration statement environment))
       ((eq? 'funcall (statement-type statement)) (begin (interpret-function statement environment throw) environment))
       ((eq? 'return (statement-type statement)) (interpret-return statement environment return throw))
       ((eq? 'var (statement-type statement)) (interpret-declare statement environment throw))
@@ -479,13 +479,13 @@
 ;(interpret "test8.txt") ;-> returns 20 correctly
 ;(interpret "test9.txt") ;-> returns 24 correctly
 ;(interpret "test10.txt") ;-> returns 2 correctly
-;(interpret "test11.txt") ; -> returns 35 correctly
+;(interpret "test11.txt") ;-> returns 35 correctly
 ;(interpret "test12.txt") ; -> returns parameter mismatch error correctly
-;(interpret "test13.txt") ; FAILS -> contract violation
-;(interpret "test14.txt") ; FAILS -> contract violation
-;(interpret "test15.txt") ; FAILS -> contract violation
-;(interpret "test16.txt") ; FAILS -> contract violation
-;(interpret "test17.txt") ; FAILS -> contract violation
+;(interpret "test13.txt") ;-> returns 90 correctly
+;(interpret "test14.txt") ;-> returns 69 correctly
+;(interpret "test15.txt") ;-> returns 87 correctly
+;(interpret "test16.txt") ;-> returns 64 correctly
+;(interpret "test17.txt") ;-> returns error: variable used but not defined: b correctly
 ;(interpret "test18.txt") ;-> returns 125 correctly
 ;(interpret "test19.txt") ; FAILS -> error: variable used but not defined: x
 ;(interpret "test20.txt") ; FAILS -> error: undefined variable x
