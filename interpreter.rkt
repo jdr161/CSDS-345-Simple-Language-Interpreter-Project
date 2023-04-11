@@ -41,7 +41,7 @@
 (define interpret-statement-outer
   (lambda (statement environment)
     (cond
-      ((eq? 'var (statement-type statement)) (interpret-declare statement environment))
+      ((eq? 'var (statement-type statement)) (interpret-declare statement environment (lambda (v env) (myerror "Uncaught exception thrown"))))
       ((eq? 'function (statement-type statement)) (interpret-function-declaration statement environment))
       (else (myerror "Unknown statement:" (statement-type statement))))))
 ; create-function-environment: a function that takes a state as input and returns the
@@ -227,7 +227,7 @@
     (cond
       ((eq? '! (operator expr)) (not (eval-expression (operand1 expr) environment throw)))
       ((and (eq? '- (operator expr)) (= 2 (length expr))) (- (eval-expression (operand1 expr) environment throw)))
-      (else (eval-binary-op2 expr (eval-expression (operand1 expr) environment throw) environment)))))
+      (else (eval-binary-op2 expr (eval-expression (operand1 expr) environment throw) environment throw)))))
 
 ; Complete the evaluation of the binary operator by evaluating the second operand and performing the operation.
 (define eval-binary-op2
@@ -481,11 +481,11 @@
 ;(interpret "test10.txt") ; FAILS -> contract violation
 ;(interpret "test11.txt") ; FAILS -> error: undefined variable sety
 ;(interpret "test12.txt") ; -> returns parameter mismatch error correctly
-;(interpret "test13.txt") ; FAILS -> Unknown statement: function
-;(interpret "test14.txt") ; FAILS -> Unknown statement: function
-;(interpret "test15.txt") ; FAILS -> Unknown statement: function
-;(interpret "test16.txt") ; FAILS -> Unknown statement: function
-;(interpret "test17.txt") ; FAILS -> Unknown statement: function
+;(interpret "test13.txt") ; FAILS -> contract violation
+;(interpret "test14.txt") ; FAILS -> contract violation
+;(interpret "test15.txt") ; FAILS -> contract violation
+;(interpret "test16.txt") ; FAILS -> contract violation
+;(interpret "test17.txt") ; FAILS -> contract violation
 ;(interpret "test18.txt") ;-> returns 125 correctly
-;(interpret "test19.txt") ; FAILS -> Uncaught exception thrown
-;(interpret "test20.txt") ; FAILS -> Uncaught exception thrown
+;(interpret "test19.txt") ; FAILS -> error: variable used but not defined: x
+;(interpret "test20.txt") ; FAILS -> error: undefined variable x
