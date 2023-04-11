@@ -7,7 +7,6 @@
 ; TODO:
 ; Make sure our shortcut of just returning the function-definition-environment doesn't bite us later
 ; Pass throw continuation into anything that calls interpret-function
-; have interpret-statement-list deal with defining functions (for when functions are defined in functions
 ; call-main might not need a return continuation
 ; add an error when # of formal-params does not match # of actual-params
 
@@ -73,6 +72,7 @@
 (define interpret-statement
   (lambda (statement environment return break continue throw)
     (cond
+      ((eq? 'function (statement-type statement)) (interpret-declare statement environment))
       ((eq? 'funcall (statement-type statement)) (interpret-function statement environment throw))
       ((eq? 'return (statement-type statement)) (interpret-return statement environment return))
       ((eq? 'var (statement-type statement)) (interpret-declare statement environment))
