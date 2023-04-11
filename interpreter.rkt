@@ -5,9 +5,6 @@
 ; (load "simpleParser.scm")
 
 ; TODO:
-; fix bugs identified in tests
-;      Test 19: popping one too many layers off of state when throwing inside of a function
-;      Test 20: same thing as test 19 probably
 ; call-main might not need a return continuation
 ; Make sure our shortcut of just returning the function-definition-environment doesn't bite us later
 
@@ -98,7 +95,7 @@
              (interpret-statement-list (get-body-from-closure closure) func-env return
                                        (lambda (env) (myerror "Break used outside of loop"))
                                        (lambda (env) (myerror "Continue used outside of loop"))
-                                       throw)
+                                       (lambda (v env) (throw v environment)))
              (myerror "Mismatched parameters and arguments number in function call:" (get-function-name statement))))))))
 
 ; TODO: add comment
@@ -489,5 +486,5 @@
 ;(interpret "test16.txt") ;-> returns 64 correctly
 ;(interpret "test17.txt") ;-> returns error: variable used but not defined: b correctly
 ;(interpret "test18.txt") ;-> returns 125 correctly
-;(interpret "test19.txt") ; FAILS -> error: variable used but not defined: x
-;(interpret "test20.txt") ; FAILS -> error: undefined variable x
+;(interpret "test19.txt") ;-> returns 100 correctly
+;(interpret "test20.txt") ;-> returns 2000400 correctly
