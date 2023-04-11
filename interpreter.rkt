@@ -9,6 +9,7 @@
 ; make M_value deal with function call as expression
 ; make M_state deal with function call as statement
 ; call-main DOESNT NEED A RETURN?
+; ERROR WHEN # OF ACTUAL-PARAMS DOES NOT MATCH # OF FORMAL-PARAMS
 
 
 ; An interpreter for the simple language that uses call/cc for the continuations.  Does not handle side effects.
@@ -466,5 +467,24 @@
                             (makestr (string-append str (string-append " " (symbol->string (car vals)))) (cdr vals))))))
       (error-break (display (string-append str (makestr "" vals)))))))
 
-(interpret "test1.txt")
+;(interpret "test1.txt") ;-> returns 10 correctly
+;(interpret "test2.txt") ;-> returns 14 correctly
+;(interpret "test3.txt") ;-> returns 45 correctly
+;(interpret "test4.txt") ;-> returns 55 correctly
+;(interpret "test5.txt") ;-> returns 1 correctly
+;(interpret "test6.txt") ;-> returns 115 correctly
+;(interpret "test7.txt") ;-> returns 'true correctly
+;(interpret "test8.txt") ;-> returns 20 correctly
+;(interpret "test9.txt") ;-> returns 24 correctly
+;(interpret "test10.txt") ; FAILS -> contract violation
+;(interpret "test11.txt") ; FAILS -> error: undefined variable sety
+;(interpret "test12.txt") ; FAILS -> NO ERROR FOR MISMATCHED # of PARAMS
+;(interpret "test13.txt") ; FAILS -> Unknown statement: function
+;(interpret "test14.txt") ; FAILS -> Unknown statement: function
+;(interpret "test15.txt") ; FAILS -> Unknown statement: function
+;(interpret "test16.txt") ; FAILS -> Unknown statement: function
+;(interpret "test17.txt") ; FAILS -> Unknown statement: function
+;(interpret "test18.txt") ;-> returns 125 correctly
+;(interpret "test19.txt") ; FAILS -> Uncaught exception thrown
+;(interpret "test20.txt") ; FAILS -> Uncaught exception thrown
 
