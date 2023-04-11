@@ -8,6 +8,7 @@
 ; Make sure our shortcut of just returning the function-definition-environment doesn't bite us later
 ; make M_value deal with function call as expression
 ; make M_state deal with function call as statement
+; call-main DOESNT NEED A RETURN?
 
 
 ; An interpreter for the simple language that uses call/cc for the continuations.  Does not handle side effects.
@@ -23,12 +24,12 @@
     (scheme->language
      (call/cc
       (lambda (return)
-        (call-main (interpret-statement-list-outer (parser file) (newenvironment)) return))))
+        (call-main (interpret-statement-list-outer (parser file) (newenvironment)) return))))))
 
 ; looks up the main method and calls it
 (define call-main
   (lambda (environment return)
-    (interpret-function (lookup 'main environment) environment (lambda (v env) (myerror "Uncaught exception thrown")))))))
+    (interpret-function (list 'funcall 'main) environment (lambda (v env) (myerror "Uncaught exception thrown")))))
     
 ; outer layer function that declares variables and functions
 (define interpret-statement-list-outer
