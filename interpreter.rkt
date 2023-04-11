@@ -5,10 +5,9 @@
 ; (load "simpleParser.scm")
 
 ; TODO:
-; Make sure our shortcut of just returning the function-definition-environment doesn't bite us later
 ; Pass throw continuation into anything that calls interpret-function
 ; call-main might not need a return continuation
-; add an error when # of formal-params does not match # of actual-params
+; Make sure our shortcut of just returning the function-definition-environment doesn't bite us later
 
 
 ; An interpreter for the simple language that uses call/cc for the continuations.  Does not handle side effects.
@@ -88,15 +87,17 @@
 
 ; TODO: add comment
 (define interpret-function
-  (lambda (statement environment throw)
+  (lambda (statement environment throw)    
     (call/cc
      (lambda (return)
        (let* ((closure (lookup (get-function-name statement) environment))
               (func-env (addParams (get-formal-params-from-closure closure) (get-actual-params statement) (push-frame (call-make-env-from-closure closure environment)) environment)))
-         (interpret-statement-list (get-body-from-closure closure) func-env return
-                                   (lambda (env) (myerror "Break used outside of loop"))
-                                   (lambda (env) (myerror "Continue used outside of loop"))
-                                   throw))))))
+         (if (eq? (length (get-formal-params-from-closure closure)) (length (get-actual-params statement)))
+             (interpret-statement-list (get-body-from-closure closure) func-env return
+                                       (lambda (env) (myerror "Break used outside of loop"))
+                                       (lambda (env) (myerror "Continue used outside of loop"))
+                                       throw)
+             (myerror "Mismatched parameters and arguments number in function call:" (get-function-name statement))))))))
 
 ; TODO: add comment
 (define addParams
@@ -478,7 +479,7 @@
 ;(interpret "test9.txt") ;-> returns 24 correctly
 ;(interpret "test10.txt") ; FAILS -> contract violation
 ;(interpret "test11.txt") ; FAILS -> error: undefined variable sety
-;(interpret "test12.txt") ; FAILS -> NO ERROR FOR MISMATCHED # of PARAMS
+;(interpret "test12.txt") ; -> returns parameter mismatch error correctly
 ;(interpret "test13.txt") ; FAILS -> Unknown statement: function
 ;(interpret "test14.txt") ; FAILS -> Unknown statement: function
 ;(interpret "test15.txt") ; FAILS -> Unknown statement: function
