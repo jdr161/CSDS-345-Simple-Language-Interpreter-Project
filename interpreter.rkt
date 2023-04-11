@@ -21,14 +21,14 @@
 (define interpret
   (lambda (file)
     (scheme->language
-      (call-main (interpret-statement-list-outer (parser file) (newenvironment))))))
+     (call/cc
+      (lambda (return)
+        (call-main (interpret-statement-list-outer (parser file) (newenvironment)) return))))
 
 ; looks up the main method and calls it
 (define call-main
-  (lambda (environment)
-    (call/cc
-     (lambda (return)
-       (interpret-function (lookup 'main environment) environment (lambda (v env) (myerror "Uncaught exception thrown")))))))
+  (lambda (environment return)
+    (interpret-function (lookup 'main environment) environment (lambda (v env) (myerror "Uncaught exception thrown")))))))
     
 ; outer layer function that declares variables and functions
 (define interpret-statement-list-outer
@@ -103,7 +103,7 @@
         fstate
         (addParams (cdr formal-params)
                    (cdr actual-params)
-                   (insert (car formal-params) (eval-expression (car actual-params) environment) fstate)
+                   (insert (car formal-params) (eval-expression (car actual-params) environment) fstate) 
                    environment))))
 
 ; Calls the return continuation with the given expression value
@@ -464,4 +464,6 @@
                             str
                             (makestr (string-append str (string-append " " (symbol->string (car vals)))) (cdr vals))))))
       (error-break (display (string-append str (makestr "" vals)))))))
+
+(interpret "test1.txt")
 
