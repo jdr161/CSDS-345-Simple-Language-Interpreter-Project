@@ -6,10 +6,10 @@
 
 ; TODO:
 ; Make sure our shortcut of just returning the function-definition-environment doesn't bite us later
-; make M_value deal with function call as expression
-; make M_state deal with function call as statement
-; call-main DOESNT NEED A RETURN?
-; ERROR WHEN # OF ACTUAL-PARAMS DOES NOT MATCH # OF FORMAL-PARAMS
+; Pass throw continuation into anything that calls interpret-function
+; have interpret-statement-list deal with defining functions (for when functions are defined in functions
+; call-main might not need a return continuation
+; add an error when # of formal-params does not match # of actual-params
 
 
 ; An interpreter for the simple language that uses call/cc for the continuations.  Does not handle side effects.
@@ -125,7 +125,7 @@
   (lambda (statement environment)
     (update (get-assign-lhs statement) (eval-expression (get-assign-rhs statement) environment) environment)))
 
-; We need to check if there is an else conditenvironion.  Otherwise, we evaluate the expression and do the right thing.
+; We need to check if there is an else condition.  Otherwise, we evaluate the expression and do the right thing.
 (define interpret-if
   (lambda (statement environment return break continue throw)
     (cond

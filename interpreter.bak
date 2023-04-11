@@ -1,7 +1,15 @@
 ; If you are using scheme instead of racket, comment these two lines, uncomment the (load "simpleParser.scm") and comment the (require "simpleParser.rkt")
 #lang racket
-(require "simpleParser.rkt")
+(require "functionParser.rkt")
+;(require "simpleParser.rkt")
 ; (load "simpleParser.scm")
+
+; TODO:
+; Make sure our shortcut of just returning the function-definition-environment doesn't bite us later
+; make M_value deal with function call as expression
+; make M_state deal with function call as statement
+; call-main DOESNT NEED A RETURN?
+; ERROR WHEN # OF ACTUAL-PARAMS DOES NOT MATCH # OF FORMAL-PARAMS
 
 
 ; An interpreter for the simple language that uses call/cc for the continuations.  Does not handle side effects.
@@ -17,9 +25,42 @@
     (scheme->language
      (call/cc
       (lambda (return)
-        (interpret-statement-list (parser file) (newenvironment) return
-                                  (lambda (env) (myerror "Break used outside of loop")) (lambda (env) (myerror "Continue used outside of loop"))
-                                  (lambda (v env) (myerror "Uncaught exception thrown"))))))))
+        (call-main (interpret-statement-list-outer (parser file) (newenvironment)) return))))))
+
+; looks up the main method and calls it
+(define call-main
+  (lambda (environment return)
+    (interpret-function (list 'funcall 'main) environment (lambda (v env) (myerror "Uncaught exception thrown")))))
+    
+; outer layer function that declares variables and functions
+(define interpret-statement-list-outer
+  (lambda (statement-list environment)
+    (if (null? statement-list)
+        environment
+        (interpret-statement-list-outer (cdr statement-list) (interpret-statement-outer (car statement-list) environment)))))
+
+; helper function for outer layer function. 
+(define interpret-statement-outer
+  (lambda (statement environment)
+    (cond
+      ((eq? 'var (statement-type statement)) (interpret-declare statement environment))
+      ((eq? 'function (statement-type statement)) (interpret-function-declaration statement environment))
+      (else (myerror "Unknown statement:" (statement-type statement))))))
+; create-function-environment: a function that takes a state as input and returns the
+; environment of bindings active in the function body/defined function.
+; note: in the implementation, dont need the function really.
+; any value that lets us recreate the enviro for the function execution is valid
+;strip away anything that shouldn't be in the function from the state
+
+; adds the function to the state
+(define interpret-function-declaration
+  (lambda (statement environment)
+    (insert (get-function-name statement) (make-closure (get-function-name statement) (get-formal-params statement) (get-function-body statement) environment) environment)))
+
+; creates the function closure for a given set of formal parameters, function body, and environment
+(define make-closure
+  (lambda (func-name formal-params function-body environment)
+    (list formal-params function-body (lambda (func-call-env) (insert func-name (lookup func-name func-call-env) environment)))))
 
 ; interprets a list of statements.  The environment from each statement is used for the next ones.
 (define interpret-statement-list
@@ -32,6 +73,7 @@
 (define interpret-statement
   (lambda (statement environment return break continue throw)
     (cond
+      ((eq? 'funcall (statement-type statement)) (interpret-function statement environment throw))
       ((eq? 'return (statement-type statement)) (interpret-return statement environment return))
       ((eq? 'var (statement-type statement)) (interpret-declare statement environment))
       ((eq? '= (statement-type statement)) (interpret-assign statement environment))
@@ -43,6 +85,28 @@
       ((eq? 'throw (statement-type statement)) (interpret-throw statement environment throw))
       ((eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw))
       (else (myerror "Unknown statement:" (statement-type statement))))))
+
+; TODO: add comment
+(define interpret-function
+  (lambda (statement environment throw)
+    (call/cc
+     (lambda (return)
+       (let* ((closure (lookup (get-function-name statement) environment))
+              (func-env (addParams (get-formal-params-from-closure closure) (get-actual-params statement) (push-frame (call-make-env-from-closure closure environment)) environment)))
+         (interpret-statement-list (get-body-from-closure closure) func-env return
+                                   (lambda (env) (myerror "Break used outside of loop"))
+                                   (lambda (env) (myerror "Continue used outside of loop"))
+                                   throw))))))
+
+; TODO: add comment
+(define addParams
+  (lambda (formal-params actual-params fstate environment)
+    (if (null? formal-params)
+        fstate
+        (addParams (cdr formal-params)
+                   (cdr actual-params)
+                   (insert (car formal-params) (eval-expression (car actual-params) environment) fstate) 
+                   environment))))
 
 ; Calls the return continuation with the given expression value
 (define interpret-return
@@ -61,7 +125,7 @@
   (lambda (statement environment)
     (update (get-assign-lhs statement) (eval-expression (get-assign-rhs statement) environment) environment)))
 
-; We need to check if there is an else condition.  Otherwise, we evaluate the expression and do the right thing.
+; We need to check if there is an else conditenvironion.  Otherwise, we evaluate the expression and do the right thing.
 (define interpret-if
   (lambda (statement environment return break continue throw)
     (cond
@@ -167,6 +231,7 @@
 (define eval-binary-op2
   (lambda (expr op1value environment)
     (cond
+      ((eq? 'funcall (operator expr)) (interpret-function expr environment (lambda (v env) (myerror "Uncaught exception thrown")))) ; TODO: Throw continuation passed to here?
       ((eq? '+ (operator expr)) (+ op1value (eval-expression (operand2 expr) environment)))
       ((eq? '- (operator expr)) (- op1value (eval-expression (operand2 expr) environment)))
       ((eq? '* (operator expr)) (* op1value (eval-expression (operand2 expr) environment)))
@@ -224,6 +289,13 @@
 (define get-try operand1)
 (define get-catch operand2)
 (define get-finally operand3)
+(define get-function-name operand1)
+(define get-formal-params operand2)
+(define get-function-body operand3)
+(define get-formal-params-from-closure car)
+(define get-actual-params cddr)
+(define call-make-env-from-closure (lambda (closure environment) ((caddr closure) environment)))
+(define get-body-from-closure operand1)
 
 (define catch-var
   (lambda (catch-statement)
@@ -314,7 +386,7 @@
 (define get-value
   (lambda (n l)
     (cond
-      ((zero? n) (car l))
+      ((zero? n) (unbox (car l)))
       (else (get-value (- n 1) (cdr l))))))
 
 ; Adds a new variable/value binding pair into the environment.  Gives an error if the variable already exists in this frame.
@@ -334,7 +406,7 @@
 ; Add a new variable/value pair to the frame.
 (define add-to-frame
   (lambda (var val frame)
-    (list (cons var (variables frame)) (cons (scheme->language val) (store frame)))))
+    (list (cons var (variables frame)) (cons (box (scheme->language val)) (store frame)))))
 
 ; Changes the binding of a variable in the environment to a new value
 (define update-existing
@@ -352,7 +424,7 @@
 (define update-in-frame-store
   (lambda (var val varlist vallist)
     (cond
-      ((eq? var (car varlist)) (cons (scheme->language val) (cdr vallist)))
+      ((eq? var (car varlist)) (begin (set-box! (car vallist) val) vallist))
       (else (cons (car vallist) (update-in-frame-store var val (cdr varlist) (cdr vallist)))))))
 
 ; Returns the list of variables from a frame
@@ -394,4 +466,25 @@
                             str
                             (makestr (string-append str (string-append " " (symbol->string (car vals)))) (cdr vals))))))
       (error-break (display (string-append str (makestr "" vals)))))))
+
+;(interpret "test1.txt") ;-> returns 10 correctly
+;(interpret "test2.txt") ;-> returns 14 correctly
+;(interpret "test3.txt") ;-> returns 45 correctly
+;(interpret "test4.txt") ;-> returns 55 correctly
+;(interpret "test5.txt") ;-> returns 1 correctly
+;(interpret "test6.txt") ;-> returns 115 correctly
+;(interpret "test7.txt") ;-> returns 'true correctly
+;(interpret "test8.txt") ;-> returns 20 correctly
+;(interpret "test9.txt") ;-> returns 24 correctly
+;(interpret "test10.txt") ; FAILS -> contract violation
+;(interpret "test11.txt") ; FAILS -> error: undefined variable sety
+;(interpret "test12.txt") ; FAILS -> NO ERROR FOR MISMATCHED # of PARAMS
+;(interpret "test13.txt") ; FAILS -> Unknown statement: function
+;(interpret "test14.txt") ; FAILS -> Unknown statement: function
+;(interpret "test15.txt") ; FAILS -> Unknown statement: function
+;(interpret "test16.txt") ; FAILS -> Unknown statement: function
+;(interpret "test17.txt") ; FAILS -> Unknown statement: function
+;(interpret "test18.txt") ;-> returns 125 correctly
+;(interpret "test19.txt") ; FAILS -> Uncaught exception thrown
+;(interpret "test20.txt") ; FAILS -> Uncaught exception thrown
 
