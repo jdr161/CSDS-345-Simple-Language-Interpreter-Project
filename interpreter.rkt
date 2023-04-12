@@ -5,12 +5,7 @@
 
 #lang racket
 (require "functionParser.rkt")
-;(require "simpleParser.rkt")
 ; (load "simpleParser.scm")
-
-; TODO:
-; call-main might not need a return continuation (does this mean we just need the lambda (environment)?
-; Make sure our shortcut of just returning the function-definition-environment doesn't bite us later (not sure what this means but it works?)
 
 
 ; An interpreter for the simple language that uses call/cc for the continuations.  Does not handle side effects.
@@ -24,9 +19,7 @@
 (define interpret
   (lambda (file)
     (scheme->language
-     (call/cc
-      (lambda (return)
-        (call-main (interpret-statement-list-outer (parser file) (newenvironment)) return))))))
+     (call-main (interpret-statement-list-outer (parser file) (newenvironment)) return))))
 
 ; looks up the main method and calls it
 (define call-main
@@ -473,24 +466,3 @@
                             str
                             (makestr (string-append str (string-append " " (symbol->string (car vals)))) (cdr vals))))))
       (error-break (display (string-append str (makestr "" vals)))))))
-
-;(interpret "test1.txt") ;-> returns 10 correctly
-;(interpret "test2.txt") ;-> returns 14 correctly
-;(interpret "test3.txt") ;-> returns 45 correctly
-;(interpret "test4.txt") ;-> returns 55 correctly
-;(interpret "test5.txt") ;-> returns 1 correctly
-;(interpret "test6.txt") ;-> returns 115 correctly
-;(interpret "test7.txt") ;-> returns 'true correctly
-;(interpret "test8.txt") ;-> returns 20 correctly
-;(interpret "test9.txt") ;-> returns 24 correctly
-;(interpret "test10.txt") ;-> returns 2 correctly
-;(interpret "test11.txt") ;-> returns 35 correctly
-;(interpret "test12.txt") ; -> returns parameter mismatch error correctly
-;(interpret "test13.txt") ;-> returns 90 correctly
-;(interpret "test14.txt") ;-> returns 69 correctly
-;(interpret "test15.txt") ;-> returns 87 correctly
-;(interpret "test16.txt") ;-> returns 64 correctly
-;(interpret "test17.txt") ;-> returns error: variable used but not defined: b correctly
-;(interpret "test18.txt") ;-> returns 125 correctly
-;(interpret "test19.txt") ;-> returns 100 correctly
-;(interpret "test20.txt") ;-> returns 2000400 correctly
