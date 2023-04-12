@@ -1,12 +1,16 @@
-; If you are using scheme instead of racket, comment these two lines, uncomment the (load "simpleParser.scm") and comment the (require "simpleParser.rkt")
+; Interpreter Part 3 (Code modified from interpreter part 2 prof's call/cc version)
+; James Redding
+; Maria Eradze
+; Wendy Wu
+
 #lang racket
 (require "functionParser.rkt")
 ;(require "simpleParser.rkt")
 ; (load "simpleParser.scm")
 
 ; TODO:
-; call-main might not need a return continuation
-; Make sure our shortcut of just returning the function-definition-environment doesn't bite us later
+; call-main might not need a return continuation (does this mean we just need the lambda (environment)?
+; Make sure our shortcut of just returning the function-definition-environment doesn't bite us later (not sure what this means but it works?)
 
 
 ; An interpreter for the simple language that uses call/cc for the continuations.  Does not handle side effects.
@@ -34,7 +38,7 @@
   (lambda (statement-list environment)
     (if (null? statement-list)
         environment
-        (interpret-statement-list-outer (cdr statement-list) (interpret-statement-outer (car statement-list) environment)))))
+        (interpret-statement-list-outer (restof statement-list) (interpret-statement-outer (outer statement-list) environment)))))
 
 ; helper function for outer layer function. 
 (define interpret-statement-outer
@@ -43,11 +47,6 @@
       ((eq? 'var (statement-type statement)) (interpret-declare statement environment (lambda (v env) (myerror "Uncaught exception thrown"))))
       ((eq? 'function (statement-type statement)) (interpret-function-declaration statement environment))
       (else (myerror "Unknown statement:" (statement-type statement))))))
-; create-function-environment: a function that takes a state as input and returns the
-; environment of bindings active in the function body/defined function.
-; note: in the implementation, dont need the function really.
-; any value that lets us recreate the enviro for the function execution is valid
-;strip away anything that shouldn't be in the function from the state
 
 ; adds the function to the state
 (define interpret-function-declaration
@@ -64,7 +63,7 @@
   (lambda (statement-list environment return break continue throw)
     (if (null? statement-list)
         environment
-        (interpret-statement-list (cdr statement-list) (interpret-statement (car statement-list) environment return break continue throw) return break continue throw))))
+        (interpret-statement-list (restof statement-list) (interpret-statement (outer statement-list) environment return break continue throw) return break continue throw))))
 
 ; interpret a statement in the environment with continuations for return, break, continue, throw
 (define interpret-statement
@@ -84,7 +83,10 @@
       ((eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw))
       (else (myerror "Unknown statement:" (statement-type statement))))))
 
-; TODO: add comment
+; interpret a single function given statement of the function call, the current environment, and a throw continuation
+; creates the closure and func-env and then analyze whether the number of formal params = the number of actual params
+; if equal, then just interprets the code block like in part2 and then returns a value/just does the function call
+; returns the environment after done with interpreting the function.
 (define interpret-function
   (lambda (statement environment throw)    
     (call/cc
@@ -98,14 +100,16 @@
                                        (lambda (v env) (throw v environment)))
              (myerror "Mismatched parameters and arguments number in function call:" (get-function-name statement))))))))
 
-; TODO: add comment
+; Inputs are the formal params, actual params, fstate, environment, and throw
+; Inserts all the corresponding formal parameter and actual parameter from the function into a fstate (function state) until the parameters funs out
+; returns the function environment
 (define addParams
   (lambda (formal-params actual-params fstate environment throw)
     (if (null? formal-params)
         fstate
-        (addParams (cdr formal-params)
-                   (cdr actual-params)
-                   (insert (car formal-params) (eval-expression (car actual-params) environment throw) fstate) 
+        (addParams (restof formal-params)
+                   (restof actual-params)
+                   (insert (outer formal-params) (eval-expression (outer actual-params) environment throw) fstate) 
                    environment
                    throw))))
 
@@ -148,7 +152,7 @@
 ; Interprets a block.  The break, continue, and throw continuations must be adjusted to pop the environment
 (define interpret-block
   (lambda (statement environment return break continue throw)
-    (pop-frame (interpret-statement-list (cdr statement)
+    (pop-frame (interpret-statement-list (restof statement)
                                          (push-frame environment)
                                          return
                                          (lambda (env) (break (pop-frame env)))
@@ -275,6 +279,8 @@
     (not (null? (cdddr statement)))))
 
 ; these helper functions define the parts of the various statement types
+(define outer car)
+(define restof cdr)
 (define statement-type operator)
 (define get-expr operand1)
 (define get-declare-var operand1)
@@ -366,7 +372,7 @@
     (cond
       ((null? environment) (myerror "error: undefined variable" var))
       ((exists-in-list? var (variables (topframe environment))) (lookup-in-frame var (topframe environment)))
-      (else (lookup-in-env var (cdr environment))))))
+      (else (lookup-in-env var (restof environment))))))
 
 ; Return the value bound to a variable in the frame
 (define lookup-in-frame
@@ -393,9 +399,9 @@
 ; Adds a new variable/value binding pair into the environment.  Gives an error if the variable already exists in this frame.
 (define insert
   (lambda (var val environment)
-    (if (exists-in-list? var (variables (car environment)))
+    (if (exists-in-list? var (variables (outer environment)))
         (myerror "error: variable is being re-declared:" var)
-        (cons (add-to-frame var val (car environment)) (cdr environment)))))
+        (cons (add-to-frame var val (outer environment)) (restof environment)))))
 
 ; Changes the binding of a variable to a new value in the environment.  Gives an error if the variable does not exist.
 (define update
@@ -412,7 +418,7 @@
 ; Changes the binding of a variable in the environment to a new value
 (define update-existing
   (lambda (var val environment)
-    (if (exists-in-list? var (variables (car environment)))
+    (if (exists-in-list? var (variables (outer environment)))
         (cons (update-in-frame var val (topframe environment)) (remainingframes environment))
         (cons (topframe environment) (update-existing var val (remainingframes environment))))))
 
@@ -425,8 +431,8 @@
 (define update-in-frame-store
   (lambda (var val varlist vallist)
     (cond
-      ((eq? var (car varlist)) (begin (set-box! (car vallist) val) vallist))
-      (else (cons (car vallist) (update-in-frame-store var val (cdr varlist) (cdr vallist)))))))
+      ((eq? var (outer varlist)) (begin (set-box! (outer vallist) val) vallist)) ;outer is just car (the outermost element or the first element of the list
+      (else (cons (outer vallist) (update-in-frame-store var val (restof varlist) (restof vallist))))))) ;restof = cdr
 
 ; Returns the list of variables from a frame
 (define variables
