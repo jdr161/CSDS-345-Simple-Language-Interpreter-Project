@@ -4,7 +4,7 @@
 ; Wendy Wu
 
 #lang racket
-(require "functionParser.rkt")
+(require "classParser.rkt")
 ; (load "simpleParser.scm")
 
 
@@ -19,11 +19,11 @@
 (define interpret
   (lambda (file)
     (scheme->language
-     (call-main (interpret-statement-list-outer (parser file) (newenvironment)) return))))
+     (call-main (interpret-statement-list-outer (parser file) (newenvironment))))))
 
 ; looks up the main method and calls it
 (define call-main
-  (lambda (environment return)
+  (lambda (environment)
     (interpret-function (list 'funcall 'main) environment (lambda (v env) (myerror "Uncaught exception thrown")))))
     
 ; outer layer function that declares variables and functions
