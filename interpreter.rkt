@@ -20,6 +20,7 @@
   (lambda (file)
     (scheme->language
      (call-main (interpret-statement-list-outer (parser file) (newenvironment))))))
+  
 
 ; looks up the main method and calls it
 (define call-main
@@ -44,12 +45,56 @@
 ; adds the function to the state
 (define interpret-function-declaration
   (lambda (statement environment)
-    (insert (get-function-name statement) (make-closure (get-function-name statement) (get-formal-params statement) (get-function-body statement) environment) environment)))
+    (insert (get-function-name statement) (make-function-closure (get-function-name statement) (get-formal-params statement) (get-function-body statement) environment) environment)))
+
+; class closure
+(define make-class-closure
+  (lambda (super-class-name class-body)
+    (list super-class-name (get-class-methods class-body (newenvironment)) (get-instance-fields class-body (newenvironment)))))
+
+; helper function
+(define get-class-methods
+  (lambda (statement-list environment)
+    (if (null? statement-list)
+        environment
+        (get-class-methods (restof statement-list) (get-class-method (outer statement-list) environment)))))
+
+; helper function
+(define get-class-method
+  (lambda (statement environment)
+    (if (eq? 'function (statement-type statement))
+        (interpret-function-declaration statement environment) ; TODO: see if not passing in instance fields, causes this to break
+        environment)))
+
+; helper function
+(define get-instance-fields
+  (lambda (statement-list environment)
+    (if (null? statement-list)
+        environment
+        (get-instance-fields (restof statement-list) (get-instance-field (outer statement-list) environment)))))
+
+; helper function
+(define get-instance-field
+  (lambda (statement environment)
+    (if (eq? 'var (statement-type statement))
+        (insert (operand1 statement) (operand2 statement) environment)
+        environment)))
+
+; make instance closure
+(define make-instance-closure
+  (lambda (runtime-type environment throw)
+    (list runtime-type (compute-initial-values (get-instance-fields-from-class-closure (lookup runtime-type environment)) environment throw))))
+
+(define compute-initial-values
+  (lambda (non-computed-environment environment throw) ; non-computed-environment - '(((a b c) ((expra) (exprb) (exprc))))
+    (if (null? (caar non-computed-environment))
+        environment
+        (insert (caaar non-computed-environment) (eval-expression (caadar non-computed-environment) environment throw) (compute-initial-values (list (list (cdaar non-computed-environment) (cdadar non-computed-environment))))))))
 
 ; creates the function closure for a given set of formal parameters, function body, and environment
-(define make-closure
+(define make-function-closure
   (lambda (func-name formal-params function-body environment)
-    (list formal-params function-body (lambda (func-call-env) (insert func-name (lookup func-name func-call-env) (push-frame environment)))))) ;PUSH FRAME HERE?
+    (list formal-params function-body (lambda (func-call-env) (insert func-name (lookup func-name func-call-env) (push-frame environment))))))
 
 ; interprets a list of statements.  The environment from each statement is used for the next ones.
 (define interpret-statement-list
@@ -296,6 +341,11 @@
 (define get-actual-params cddr)
 (define call-make-env-from-closure (lambda (closure environment) ((caddr closure) environment)))
 (define get-body-from-closure operand1)
+(define get-super-class operator)
+(define get-methods operand1)
+(define get-instance-fields-from-class-closure operand2)
+(define get-runtime-type operator)
+(define get-instance-fields-from-instance-closure operand1)
 
 (define catch-var
   (lambda (catch-statement)
