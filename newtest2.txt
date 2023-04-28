@@ -1,0 +1,6 @@
+class B {
+  function main() {
+    var b = new B();
+    return b;
+  }
+}

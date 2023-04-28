@@ -17,17 +17,16 @@
 
 ; The main function.  Calls parser to get the parse tree and interprets it with a new environment.  The returned value is in the environment.
 (define interpret
-  (lambda (file)
+  (lambda (file class)
     (scheme->language
-     (call-main (interpret-statement-list-outer (parser file) (newenvironment))))))
-  
+     (call-main (interpret-statement-list-outer (parser file) (newenvironment)) class))))
 
-; looks up the main method and calls it
+; looks up the main method from the correct class and calls it
 (define call-main
-  (lambda (environment)
-    (interpret-function (list 'funcall 'main) environment (lambda (v env) (myerror "Uncaught exception thrown")))))
-    
-; outer layer function that declares variables and functions
+  (lambda (environment class)
+    (interpret-function (list 'funcall 'main) (get-methods (lookup class environment)) (lambda (v env) (myerror "Uncaught exception thrown")))))
+
+; outer layer function that adds classes to an environment
 (define interpret-statement-list-outer
   (lambda (statement-list environment)
     (if (null? statement-list)
@@ -37,10 +36,9 @@
 ; helper function for outer layer function. 
 (define interpret-statement-outer
   (lambda (statement environment)
-    (cond
-      ((eq? 'var (statement-type statement)) (interpret-declare statement environment (lambda (v env) (myerror "Uncaught exception thrown"))))
-      ((eq? 'function (statement-type statement)) (interpret-function-declaration statement environment))
-      (else (myerror "Unknown statement:" (statement-type statement))))))
+    (if (eq? 'class (statement-type statement))
+        (insert (get-class-name statement) (make-class-closure (get-super statement) (get-class-body statement)) environment)
+        (myerror "Unknown statement:" (statement-type statement)))))
 
 ; adds the function to the state
 (define interpret-function-declaration
@@ -139,7 +137,7 @@
              (myerror "Mismatched parameters and arguments number in function call:" (get-function-name statement))))))))
 
 ; Inputs are the formal params, actual params, fstate, environment, and throw
-; Inserts all the corresponding formal parameter and actual parameter from the function into a fstate (function state) until the parameters funs out
+; Inserts all the corresponding formal parameter and actual parameter from the function into a fstate (function state) until the parameters runs out
 ; returns the function environment
 (define addParams
   (lambda (formal-params actual-params fstate environment throw)
@@ -268,6 +266,7 @@
     (cond
       ((eq? '! (operator expr)) (not (eval-expression (operand1 expr) environment throw)))
       ((and (eq? '- (operator expr)) (= 2 (length expr))) (- (eval-expression (operand1 expr) environment throw)))
+      ((eq? 'new (operator expr)) (make-instance-closure (operand1 expr) environment throw))
       (else (eval-binary-op2 expr (eval-expression (operand1 expr) environment throw) environment throw)))))
 
 ; Complete the evaluation of the binary operator by evaluating the second operand and performing the operation.
@@ -346,6 +345,13 @@
 (define get-instance-fields-from-class-closure operand2)
 (define get-runtime-type operator)
 (define get-instance-fields-from-instance-closure operand1)
+(define get-class-name operand1)
+(define get-super
+  (lambda (statement)
+    (if (null? (caddr statement))
+        '()
+        (car (cdaddr statement)))))
+(define get-class-body operand3)
 
 (define catch-var
   (lambda (catch-statement)
@@ -516,3 +522,9 @@
                             str
                             (makestr (string-append str (string-append " " (symbol->string (car vals)))) (cdr vals))))))
       (error-break (display (string-append str (makestr "" vals)))))))
+
+
+(interpret "newtest2.txt" 'B)
+
+
+
