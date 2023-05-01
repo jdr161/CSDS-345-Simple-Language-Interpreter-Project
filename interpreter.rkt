@@ -45,6 +45,11 @@
   (lambda (statement environment compile-time-type instance-closure)
     (insert (get-function-name statement) (make-function-closure (get-function-name statement) (get-formal-params statement) (get-function-body statement) environment compile-time-type instance-closure) environment)))
 
+; creates the function closure for a given set of formal parameters, function body, and environment
+(define make-function-closure
+  (lambda (func-name formal-params function-body environment compile-time-type instance-closure)
+    (list (cons 'this formal-params) function-body (lambda (func-call-env) (insert func-name (lookup func-name func-call-env) (push-frame environment))) (lambda (environment) (lookup compile-time-type environment)))))
+
 ; class closure
 (define make-class-closure
   (lambda (class-name super-class-name class-body class-environment)
@@ -88,11 +93,6 @@
     (if (null? (caar non-computed-environment))
         environment
         (insert (caaar non-computed-environment) (eval-expression (caadar non-computed-environment) environment throw) (compute-initial-values (list (list (cdaar non-computed-environment) (cdadar non-computed-environment))))))))
-
-; creates the function closure for a given set of formal parameters, function body, and environment
-(define make-function-closure
-  (lambda (func-name formal-params function-body environment compile-time-type instance-closure)
-    (list formal-params function-body (lambda (func-call-env) (insert func-name (lookup func-name func-call-env) (push-frame environment))))))
 
 ; interprets a list of statements.  The environment from each statement is used for the next ones.
 (define interpret-statement-list
