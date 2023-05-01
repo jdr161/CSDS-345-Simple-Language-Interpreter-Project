@@ -24,7 +24,7 @@
 ; looks up the main method from the correct class and calls it
 (define call-main
   (lambda (environment class)
-    (interpret-function (list 'funcall 'main) (get-methods (lookup class environment)) (lambda (v env) (myerror "Uncaught exception thrown")))))
+    (interpret-function (list 'funcall 'main) (get-methods (lookup class environment)) (lambda (v env) (myerror "Uncaught exception thrown")) class '() )))
 
 ; outer layer function that adds classes to an environment
 (define interpret-statement-list-outer
@@ -55,13 +55,13 @@
   (lambda (class-name statement-list environment)
     (if (null? statement-list)
         environment
-        (get-class-methods (restof statement-list) (get-class-method class-name (outer statement-list) environment)))))
+        (get-class-methods class-name (restof statement-list) (get-class-method class-name (outer statement-list) environment)))))
 
 ; helper function
 (define get-class-method
   (lambda (class-name statement environment)
     (if (eq? 'function (statement-type statement))
-        (interpret-function-declaration statement environment) ; TODO: see if not passing in instance fields, causes this to break
+        (interpret-function-declaration statement environment '() '()) ; TODO: see if not passing in instance fields, causes this to break  TODO
         environment)))
 
 ; helper function
