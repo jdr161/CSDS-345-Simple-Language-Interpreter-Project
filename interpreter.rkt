@@ -48,7 +48,7 @@
 ; creates the function closure for a given set of formal parameters, function body, and environment
 (define make-function-closure
   (lambda (func-name formal-params function-body environment compile-time-type instance-closure)
-    (list formal-params function-body (lambda (func-call-env) (insert func-name (lookup func-name func-call-env) (push-frame environment))) (lambda (environment) (lookup compile-time-type environment)))))
+    (list (cons 'this formal-params) function-body (lambda (func-call-env) (insert func-name (lookup func-name func-call-env) (push-frame environment))) (lambda (environment) (lookup compile-time-type environment)))))
 
 ; class closure
 (define make-class-closure
