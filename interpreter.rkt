@@ -220,7 +220,14 @@
 ; Updates the environment to add an new binding for a variable
 (define interpret-assign
   (lambda (statement environment throw compile-time-type instance-closure)
-    (update (get-assign-lhs statement) (eval-expression (get-assign-rhs statement) environment throw compile-time-type instance-closure) environment)))
+    (cond
+      ((list? (get-assign-lhs statement)) (update (operand2 (get-assign-lhs statement)) ; get the right hand side of the dot expression (dot this x)
+                                                  (eval-expression (get-assign-rhs statement) environment throw compile-time-type instance-closure)
+                                                  (get-instance-fields-from-instance-closure (lookup (operand1 (get-assign-lhs statement)) environment)))) 
+      ((exists? (get-assign-lhs statement) environment) (update (get-assign-lhs statement) (eval-expression (get-assign-rhs statement) environment throw compile-time-type instance-closure) environment))
+      (else (update (get-assign-lhs statement) (eval-expression (get-assign-rhs statement) environment throw compile-time-type instance-closure) (get-instance-fields-from-instance-closure instance-closure)))))) ; update in instance closure
+         
+        
 
 ; We need to check if there is an else condition.  Otherwise, we evaluate the expression and do the right thing.
 (define interpret-if
@@ -315,7 +322,7 @@
       ((number? expr) expr)
       ((eq? expr 'true) #t)
       ((eq? expr 'false) #f)
-      ((not (list? expr)) (lookup-in-both expr environment instance-closure))
+      ((not (list? expr)) (lookup-in-both expr environment instance-closure)) ; if no dot, we look up in both
       (else (eval-operator expr environment throw compile-time-type instance-closure)))))
 
 (define lookup-in-both
@@ -597,8 +604,21 @@
       (error-break (display (string-append str (makestr "" vals)))))))
 
 
-(parser "test1.txt")
-(interpret "test1.txt" 'A)
+(parser "test5.txt")
+;(interpret "test1.txt" 'A) ; returns 15 correctly 
+;(interpret "test2.txt" 'A) ; returns 12 correctly
+;(interpret "test3.txt" 'A) ; returns 125 correctly
+;(interpret "test4.txt" 'A) ; returns 36 correctly
+(interpret "test5.txt" 'A) ; - not working
+;(interpret "test6.txt" 'A) ; - not working
+;(interpret "test7.txt" 'C)
+;(interpret "test8.txt" 'Square)
+;(interpret "test9.txt" 'Square)
+;(interpret "test10.txt" 'List)
+;(interpret "test11.txt" 'List)
+;(interpret "test12.txt" 'List)
+;(interpret "test13.txt" 'C)
+
 
 
 
