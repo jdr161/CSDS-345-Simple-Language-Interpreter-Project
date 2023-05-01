@@ -46,11 +46,17 @@
     (insert (get-function-name statement) (make-function-closure (get-function-name statement) (get-formal-params statement) (get-function-body statement) environment compile-time-type instance-closure) environment)))
 
 ; creates the function closure for a given set of formal parameters, function body, and environment
+; formal parameters (including a hidden parameter this in all instance (non-static) methods
+; body of the method
+; function that returns the portion of the state in scope for the method
+; A function that returns the class closure when needed/the class that the method is in (the compile time type of "this" in the method body
+
 (define make-function-closure
   (lambda (func-name formal-params function-body environment compile-time-type instance-closure)
     (list (cons 'this formal-params) function-body (lambda (func-call-env) (insert func-name (lookup func-name func-call-env) (push-frame environment))) (lambda (environment) (lookup compile-time-type environment)))))
 
 ; class closure
+;Super, methods, instance field names and initial values (so we can use the compile time type to determine the field accessed)
 (define make-class-closure
   (lambda (class-name super-class-name class-body class-environment)
     (list super-class-name (get-class-methods class-name class-body class-environment) (get-instance-fields class-body (newenvironment)))))
@@ -89,6 +95,7 @@
     (lookup instance-name environment)))
 
 ; make instance closure
+; run time type of the instance, the values of all the instance fields
 (define make-instance-closure
   (lambda (runtime-type environment throw)
     (list runtime-type (compute-initial-values (get-instance-fields-from-class-closure (lookup runtime-type environment)) environment throw))))
