@@ -10,7 +10,6 @@
 ; An interpreter for the simple language that uses call/cc for the continuations.  Does not handle side effects.
 (define call/cc call-with-current-continuation)
 
-
 ; The functions that start interpret-...  all return the current environment.
 ; The functions that start eval-...  all return a value
 
@@ -84,7 +83,7 @@
   (lambda (class-name statement environment)
     (cond
       ((eq? 'function (statement-type statement)) (interpret-function-declaration statement environment class-name)) ; class this method is in will always be the compile-time type
-      ((eq? 'static-function (statement-type statement)) (interpret-function-declaration statement environment class-name)) 
+      ((eq? 'static-function (statement-type statement)) (interpret-static-function-declaration statement environment class-name)) 
       (else environment))))
 
 ; adds the main function to the state
@@ -110,11 +109,6 @@
     (if (eq? 'var (statement-type statement))
         (insert (operand1 statement) (operand2 statement) environment)
         environment)))
-
-;Create a function that takes the left hand side of a dot expression and returns that instance.
-(define lefthandside-of-dot
-  (lambda (instance-name environment) ; expression will be the lefthand side of dot expression where (dot a x) is the expr is operator1 expr = expression
-    (lookup instance-name environment)))
 
 ; make instance closure
 (define make-instance-closure
@@ -145,7 +139,7 @@
       ((eq? 'function (statement-type statement)) (interpret-function-declaration statement environment compile-time-type instance-closure))
       ((eq? 'funcall (statement-type statement)) (begin (interpret-function statement environment throw compile-time-type instance-closure) environment))
       ((eq? 'return (statement-type statement)) (interpret-return statement environment return throw compile-time-type instance-closure))
-      ((eq? 'var (statement-type statement)) (interpret-declare statement environment throw compile-time-type instance-closure)) ;here
+      ((eq? 'var (statement-type statement)) (interpret-declare statement environment throw compile-time-type instance-closure)) ; here
       ((eq? '= (statement-type statement)) (interpret-assign statement environment throw compile-time-type instance-closure))
       ((eq? 'if (statement-type statement)) (interpret-if statement environment return break continue throw compile-time-type instance-closure))
       ((eq? 'while (statement-type statement)) (interpret-while statement environment return throw compile-time-type instance-closure))
@@ -163,18 +157,24 @@
 (define interpret-function
   (lambda (statement environment throw compile-time-type instance-closure)    
     (call/cc
-     (lambda (return)
-       (let* ((class-closure (lookup (get-runtime-type instance-closure) environment))
-              (closure (lookup (get-function-name statement) (get-methods class-closure)))
-              (func-env (addParams (get-formal-params-from-closure closure) (get-actual-params statement) (call-make-env-from-closure closure environment) environment throw)))
-         (if (eq? (length (get-formal-params-from-closure closure)) (length (cons instance-closure (get-actual-params statement))))
-             (interpret-statement-list (get-body-from-closure closure) func-env return
+     (lambda (return) ; TODO - funcall - sets the instance closure to the lefthandside of dot operator
+       (let* (
+              (class-closure (lookup (get-runtime-type instance-closure) environment))
+              (function-closure (lookup (get-function-name statement) (get-methods class-closure)))
+              (func-env (addParams (get-formal-params-from-closure function-closure) (get-actual-params statement) (call-make-env-from-closure function-closure environment) environment throw)))
+         (if (eq? (length (get-formal-params-from-closure function-closure)) (length (cons instance-closure (get-actual-params statement))))
+             (interpret-statement-list (get-body-from-closure function-closure) func-env return
                                        (lambda (env) (myerror "Break used outside of loop"))
                                        (lambda (env) (myerror "Continue used outside of loop"))
                                        (lambda (v env) (throw v environment))
                                        compile-time-type
                                        instance-closure)
              (myerror "Mismatched parameters and arguments number in function call:" (get-function-name statement))))))))
+
+;Create a function that takes the left hand side of a dot expression and returns that instance.
+(define lefthandside-of-dot
+  (lambda (instance-name environment) ; expression will be the lefthand side of dot expression where (dot a x) is the expr is operator1 expr = expression
+    (lookup instance-name environment)))
 
 ; Inputs are the formal params, actual params, fstate, environment, and throw
 ; Inserts all the corresponding formal parameter and actual parameter from the function into a fstate (function state) until the parameters runs out
@@ -568,7 +568,8 @@
       (error-break (display (string-append str (makestr "" vals)))))))
 
 
-(interpret "newtest2.txt" 'B)
+(parser "newtest3.txt")
+(interpret "newtest3.txt" 'A)
 
 
 
