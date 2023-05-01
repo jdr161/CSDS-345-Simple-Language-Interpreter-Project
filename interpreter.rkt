@@ -7,7 +7,6 @@
 (require "classParser.rkt")
 ; (load "simpleParser.scm")
 
-
 ; An interpreter for the simple language that uses call/cc for the continuations.  Does not handle side effects.
 (define call/cc call-with-current-continuation)
 
@@ -22,9 +21,27 @@
      (call-main (interpret-statement-list-outer (parser file) (newenvironment)) class))))
 
 ; looks up the main method from the correct class and calls it
+;(define call-main
+ ; (lambda (environment class)
+  ;  (interpret-function (list 'funcall 'main) (get-methods (lookup class environment)) (lambda (v env) (myerror "Uncaught exception thrown")) class '() ))) ; statement, environment, throw, compile-time type, instance closure
+
 (define call-main
   (lambda (environment class)
-    (interpret-function (list 'funcall 'main) (get-methods (lookup class environment)) (lambda (v env) (myerror "Uncaught exception thrown")) class '() )))
+    (call/cc
+     (lambda (return)
+       (let* ((throw (lambda (v env) (myerror "Uncaught exception thrown")))
+              (statement (list 'funcall 'main))
+              (class-closure (lookup class environment))
+              (function-closure (lookup (get-function-name statement) (get-methods class-closure)))
+              (func-env environment))
+         (if (eq? (length (get-formal-params-from-closure function-closure)) (length (get-actual-params statement)))
+             (interpret-statement-list (get-body-from-closure function-closure) func-env return
+                                       (lambda (env) (myerror "Break used outside of loop"))
+                                       (lambda (env) (myerror "Continue used outside of loop"))
+                                       (lambda (v env) (throw v environment))
+                                       class ; compile-time type
+                                       (list class (newenvironment))) ; instance-closure
+             (myerror "Mismatched parameters and arguments number in function call:" (get-function-name statement))))))))
 
 ; outer layer function that adds classes to an environment
 (define interpret-statement-list-outer
@@ -42,18 +59,18 @@
 
 ; adds the function to the state
 (define interpret-function-declaration
-  (lambda (statement environment compile-time-type instance-closure)
-    (insert (get-function-name statement) (make-function-closure (get-function-name statement) (get-formal-params statement) (get-function-body statement) environment compile-time-type instance-closure) environment)))
+  (lambda (statement environment compile-time-type)
+    (insert (get-function-name statement) (make-function-closure (get-function-name statement) (get-formal-params statement) (get-function-body statement) environment compile-time-type) environment)))
 
 ; creates the function closure for a given set of formal parameters, function body, and environment
 (define make-function-closure
-  (lambda (func-name formal-params function-body environment compile-time-type instance-closure)
-    (list (cons 'this formal-params) function-body (lambda (func-call-env) (insert func-name (lookup func-name func-call-env) (push-frame environment))) (lambda (environment) (lookup compile-time-type environment)))))
+  (lambda (func-name formal-params function-body environment compile-time-type) ; TODO- make-function closure does not get the instance-closure
+    (list (cons 'this formal-params) function-body (lambda (func-call-env) (insert func-name (lookup func-name func-call-env) (push-frame environment))) (lambda (environment) (lookup compile-time-type environment))))) ; TODO - function to lookup function closure
 
 ; class closure
 (define make-class-closure
   (lambda (class-name super-class-name class-body class-environment)
-    (list super-class-name (get-class-methods class-name class-body class-environment) (get-instance-fields class-body (newenvironment)))))
+    (list super-class-name (get-class-methods class-name class-body (newenvironment)) (get-instance-fields class-body (newenvironment)))))
 
 ; helper function
 (define get-class-methods
@@ -65,9 +82,20 @@
 ; helper function
 (define get-class-method
   (lambda (class-name statement environment)
-    (if (eq? 'function (statement-type statement))
-        (interpret-function-declaration statement environment '() '()) ; TODO: see if not passing in instance fields, causes this to break  TODO
-        environment)))
+    (cond
+      ((eq? 'function (statement-type statement)) (interpret-function-declaration statement environment class-name)) ; class this method is in will always be the compile-time type
+      ((eq? 'static-function (statement-type statement)) (interpret-function-declaration statement environment class-name)) 
+      (else environment))))
+
+; adds the main function to the state
+(define interpret-static-function-declaration
+  (lambda (statement environment compile-time-type)
+    (insert (get-function-name statement) (make-static-function-closure (get-function-name statement) (get-formal-params statement) (get-function-body statement) environment compile-time-type) environment)))      
+
+; creates the function closure for a given set of formal parameters, function body, and environment
+(define make-static-function-closure
+  (lambda (func-name formal-params function-body environment compile-time-type) ; TODO- make-function closure does not get the instance-closure
+    (list formal-params function-body (lambda (func-call-env) (insert func-name (lookup func-name func-call-env) (push-frame environment))) (lambda (environment) (lookup compile-time-type environment))))) ; TODO - function to lookup function closure
 
 ; helper function
 (define get-instance-fields
@@ -91,13 +119,17 @@
 ; make instance closure
 (define make-instance-closure
   (lambda (runtime-type environment throw)
-    (list runtime-type (compute-initial-values (get-instance-fields-from-class-closure (lookup runtime-type environment)) environment throw))))
+    (list runtime-type (compute-initial-values (get-instance-fields-from-class-closure (lookup runtime-type environment)) (newenvironment) throw)))) 
 
 (define compute-initial-values
   (lambda (non-computed-environment environment throw) ; non-computed-environment - '(((a b c) ((expra) (exprb) (exprc))))
     (if (null? (caar non-computed-environment))
         environment
-        (insert (caaar non-computed-environment) (eval-expression (caadar non-computed-environment) environment throw) (compute-initial-values (list (list (cdaar non-computed-environment) (cdadar non-computed-environment))))))))
+        (compute-initial-values (list (list (cdaar non-computed-environment) (cdadar non-computed-environment))) (compute-initial-value (caaar non-computed-environment) (caadar non-computed-environment) environment throw)))))
+
+(define compute-initial-value
+  (lambda (val-name expr environment throw)
+    (insert val-name (eval-expression expr environment throw) environment)))
 
 ; interprets a list of statements.  The environment from each statement is used for the next ones.
 (define interpret-statement-list
@@ -350,7 +382,7 @@
 (define get-function-body operand3)
 (define get-formal-params-from-closure car)
 (define get-actual-params cddr)
-(define call-make-env-from-closure (lambda (closure environment) ((caddr closure) environment)))
+(define call-make-env-from-closure (lambda (closure environment) ((caddr closure) environment))) ; TODO - how do we make an environment now?
 (define get-body-from-closure operand1)
 (define get-super-class operator)
 (define get-methods operand1)
