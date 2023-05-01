@@ -173,7 +173,7 @@
 (define interpret-function
   (lambda (statement environment throw compile-time-type instance-closure) 
     (call/cc
-     (lambda (return) ; TODO - funcall - sets the instance closure to the lefthandside of dot operator
+     (lambda (return)
        (let* ((new-instance-closure (get-instance-closure-from-dot (operand1 statement) environment throw compile-time-type instance-closure))
               (class-closure (lookup (get-runtime-type instance-closure) environment))
               (function-closure (lookup (get-function-name statement) (get-methods class-closure)))
@@ -336,11 +336,10 @@
 ; Evaluate a binary (or unary) operator.  Although this is not dealing with side effects, I have the routine evaluate the left operand first and then
 ; pass the result to eval-binary-op2 to evaluate the right operand.  This forces the operands to be evaluated in the proper order in case you choose
 ; to add side effects to the interpreter
-
 (define eval-operator
   (lambda (expr environment throw compile-time-type instance-closure)
     (cond
-      ((eq? 'dot (operator expr)) (lookup (operand2 expr) (get-instance-fields-from-instance-closure (lookup (operand1 expr) environment)))) ; OPERAND1 returning cadr ; if we see the dot operator, we lookup the variable in the instance fields of the correct instance
+      ((eq? 'dot (operator expr)) (lookup (operand2 expr) (get-instance-fields-from-instance-closure (eval-expression (operand1 expr) environment throw compile-time-type instance-closure))))
       ((eq? '! (operator expr)) (not (eval-expression (operand1 expr) environment throw compile-time-type instance-closure)))
       ((and (eq? '- (operator expr)) (= 2 (length expr))) (- (eval-expression (operand1 expr) environment throw compile-time-type instance-closure)))
       ((eq? 'new (operator expr)) (make-instance-closure (operand1 expr) environment throw compile-time-type instance-closure))
@@ -606,13 +605,13 @@
       (error-break (display (string-append str (makestr "" vals)))))))
 
 
-(parser "test5.txt")
+(parser "test6.txt")
 ;(interpret "test1.txt" 'A) ; returns 15 correctly 
 ;(interpret "test2.txt" 'A) ; returns 12 correctly
 ;(interpret "test3.txt" 'A) ; returns 125 correctly
 ;(interpret "test4.txt" 'A) ; returns 36 correctly
 ;(interpret "test5.txt" 'A) ; returns 54 correctly
-;(interpret "test6.txt" 'A) ; - not working
+(interpret "test6.txt" 'A) ; returns 110 correctly
 ;(interpret "test7.txt" 'C)
 ;(interpret "test8.txt" 'Square)
 ;(interpret "test9.txt" 'Square)
