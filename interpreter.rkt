@@ -63,8 +63,15 @@
 
 ; creates the function closure for a given set of formal parameters, function body, and environment
 (define make-function-closure
-  (lambda (func-name formal-params function-body environment compile-time-type) ; TODO- make-function closure does not get the instance-closure
-    (list (cons 'this formal-params) function-body (lambda (func-call-env) (insert func-name (lookup func-name func-call-env) (push-frame environment))) (lambda (environment) (lookup compile-time-type environment))))) ; TODO - function to lookup function closure
+  (lambda (func-name formal-params function-body environment compile-time-type)
+    (list formal-params
+          function-body
+          (lambda (func-call-env instance-closure) (insert 'this
+                                                           instance-closure
+                                                           (insert func-name
+                                                                   (lookup func-name (get-methods (lookup (get-runtime-type instance-closure) func-call-env)))
+                                                                    (push-frame environment)))) ; we want to lookup the function in the class closure method list
+          (lambda (environment) (lookup compile-time-type environment)))))
 
 ; class closure
 (define make-class-closure
@@ -93,8 +100,11 @@
 
 ; creates the function closure for a given set of formal parameters, function body, and environment
 (define make-static-function-closure
-  (lambda (func-name formal-params function-body environment compile-time-type) ; TODO- make-function closure does not get the instance-closure
-    (list formal-params function-body (lambda (func-call-env) (insert func-name (lookup func-name func-call-env) (push-frame environment))) (lambda (environment) (lookup compile-time-type environment))))) ; TODO - function to lookup function closure
+  (lambda (func-name formal-params function-body environment compile-time-type)
+    (list formal-params
+          function-body
+          (lambda (func-call-env) (insert func-name (lookup func-name func-call-env) (push-frame environment)))
+          (lambda (environment) (lookup compile-time-type environment)))))
 
 ; helper function
 (define get-instance-fields
@@ -155,26 +165,28 @@
 ; if equal, then just interprets the code block like in part2 and then returns a value/just does the function call
 ; returns the environment after done with interpreting the function.
 (define interpret-function
-  (lambda (statement environment throw compile-time-type instance-closure)    
+  (lambda (statement environment throw compile-time-type instance-closure) 
     (call/cc
      (lambda (return) ; TODO - funcall - sets the instance closure to the lefthandside of dot operator
-       (let* (
+       (let* ((new-instance-closure (get-instance-closure-from-dot (operand1 statement) environment throw compile-time-type instance-closure))
               (class-closure (lookup (get-runtime-type instance-closure) environment))
               (function-closure (lookup (get-function-name statement) (get-methods class-closure)))
-              (func-env (addParams (get-formal-params-from-closure function-closure) (get-actual-params statement) (call-make-env-from-closure function-closure environment) environment throw)))
-         (if (eq? (length (get-formal-params-from-closure function-closure)) (length (cons instance-closure (get-actual-params statement))))
-             (interpret-statement-list (get-body-from-closure function-closure) func-env return
+              (func-env (addParams (get-formal-params-from-closure function-closure) (get-actual-params statement) (call-make-env-from-closure function-closure environment new-instance-closure) environment throw)))
+         (if (eq? (length (get-formal-params-from-closure function-closure)) (length (get-actual-params statement)))
+             (interpret-statement-list (get-body-from-closure function-closure)
+                                       (update 'this new-instance-closure func-env) ; function environment with updated 'this
+                                       return
                                        (lambda (env) (myerror "Break used outside of loop"))
                                        (lambda (env) (myerror "Continue used outside of loop"))
                                        (lambda (v env) (throw v environment))
                                        compile-time-type
-                                       instance-closure)
+                                       (list (get-runtime-type instance-closure) func-env))
              (myerror "Mismatched parameters and arguments number in function call:" (get-function-name statement))))))))
 
 ;Create a function that takes the left hand side of a dot expression and returns that instance.
-(define lefthandside-of-dot
-  (lambda (instance-name environment) ; expression will be the lefthand side of dot expression where (dot a x) is the expr is operator1 expr = expression
-    (lookup instance-name environment)))
+(define get-instance-closure-from-dot
+  (lambda (dot-expr environment throw compile-time-type instance-closure) ; dot-expr in form: (dot instance-name func-name), instance-closure: list of all variables in scope (including instance variable, we want to get dot from)
+    (eval-expression (operand1 dot-expr) environment throw compile-time-type instance-closure))) ; eval-expression takes: (expr environment throw compile-time-type instance-closure)
 
 ; Inputs are the formal params, actual params, fstate, environment, and throw
 ; Inserts all the corresponding formal parameter and actual parameter from the function into a fstate (function state) until the parameters runs out
@@ -294,7 +306,7 @@
 
 ; Evaluates all possible boolean and arithmetic expressions, including constants and variables.
 (define eval-expression
-  (lambda (expr environment throw compile-time-type instance-closure)
+  (lambda (expr environment throw compile-time-type instance-closure) 
     (cond
       ((number? expr) expr)
       ((eq? expr 'true) #t)
@@ -311,13 +323,13 @@
       ((eq? '! (operator expr)) (not (eval-expression (operand1 expr) environment throw compile-time-type instance-closure)))
       ((and (eq? '- (operator expr)) (= 2 (length expr))) (- (eval-expression (operand1 expr) environment throw compile-time-type instance-closure)))
       ((eq? 'new (operator expr)) (make-instance-closure (operand1 expr) environment throw))
+      ((eq? 'funcall (operator expr)) (interpret-function expr environment throw compile-time-type instance-closure))
       (else (eval-binary-op2 expr (eval-expression (operand1 expr) environment throw compile-time-type instance-closure) environment throw compile-time-type instance-closure)))))
 
 ; Complete the evaluation of the binary operator by evaluating the second operand and performing the operation.
 (define eval-binary-op2
   (lambda (expr op1value environment throw compile-time-type instance-closure)
     (cond
-      ((eq? 'funcall (operator expr)) (interpret-function expr environment throw compile-time-type instance-closure))
       ((eq? '+ (operator expr)) (+ op1value (eval-expression (operand2 expr) environment throw compile-time-type instance-closure)))
       ((eq? '- (operator expr)) (- op1value (eval-expression (operand2 expr) environment throw compile-time-type instance-closure)))
       ((eq? '* (operator expr)) (* op1value (eval-expression (operand2 expr) environment throw compile-time-type instance-closure)))
@@ -377,12 +389,16 @@
 (define get-try operand1)
 (define get-catch operand2)
 (define get-finally operand3)
-(define get-function-name operand1)
+(define get-function-name ; we can have function names nested in (dot expressions now)
+  (lambda (stmt)
+    (if (list? (operand1 stmt))
+        (operand2 (operand1 stmt))
+        (operand1 stmt))))
 (define get-formal-params operand2)
 (define get-function-body operand3)
 (define get-formal-params-from-closure car)
 (define get-actual-params cddr)
-(define call-make-env-from-closure (lambda (closure environment) ((caddr closure) environment))) ; TODO - how do we make an environment now?
+(define call-make-env-from-closure (lambda (closure environment instance-closure) ((caddr closure) environment instance-closure)))
 (define get-body-from-closure operand1)
 (define get-super-class operator)
 (define get-methods operand1)
