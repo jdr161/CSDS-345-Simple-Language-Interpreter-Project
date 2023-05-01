@@ -122,18 +122,22 @@
 
 ; make instance closure
 (define make-instance-closure
-  (lambda (runtime-type environment throw)
-    (list runtime-type (compute-initial-values (get-instance-fields-from-class-closure (lookup runtime-type environment)) (newenvironment) throw)))) 
+  (lambda (runtime-type environment throw compile-time-type instance-closure)
+    (list runtime-type (compute-initial-values (get-instance-fields-from-class-closure (lookup runtime-type environment)) (newenvironment) throw compile-time-type instance-closure)))) 
 
 (define compute-initial-values
-  (lambda (non-computed-environment environment throw) ; non-computed-environment - '(((a b c) ((expra) (exprb) (exprc))))
+  (lambda (non-computed-environment environment throw compile-time-type instance-closure) ; non-computed-environment - '(((a b c) ((expra) (exprb) (exprc))))
     (if (null? (caar non-computed-environment))
         environment
-        (compute-initial-values (list (list (cdaar non-computed-environment) (cdadar non-computed-environment))) (compute-initial-value (caaar non-computed-environment) (caadar non-computed-environment) environment throw)))))
+        (compute-initial-values (list (list (cdaar non-computed-environment) (cdadar non-computed-environment)))
+                                (compute-initial-value (caaar non-computed-environment) non-computed-environment environment throw compile-time-type instance-closure)
+                                throw
+                                compile-time-type
+                                instance-closure))))
 
 (define compute-initial-value
-  (lambda (val-name expr environment throw)
-    (insert val-name (eval-expression expr environment throw) environment)))
+  (lambda (val-name non-computed-environment environment throw compile-time-type instance-closure)
+    (insert val-name (eval-expression (lookup val-name non-computed-environment) environment throw compile-time-type instance-closure) environment)))
 
 ; interprets a list of statements.  The environment from each statement is used for the next ones.
 (define interpret-statement-list
@@ -171,7 +175,7 @@
        (let* ((new-instance-closure (get-instance-closure-from-dot (operand1 statement) environment throw compile-time-type instance-closure))
               (class-closure (lookup (get-runtime-type instance-closure) environment))
               (function-closure (lookup (get-function-name statement) (get-methods class-closure)))
-              (func-env (addParams (get-formal-params-from-closure function-closure) (get-actual-params statement) (call-make-env-from-closure function-closure environment new-instance-closure) environment throw)))
+              (func-env (addParams (get-formal-params-from-closure function-closure) (get-actual-params statement) (call-make-env-from-closure function-closure environment new-instance-closure) environment throw compile-time-type instance-closure)))
          (if (eq? (length (get-formal-params-from-closure function-closure)) (length (get-actual-params statement)))
              (interpret-statement-list (get-body-from-closure function-closure)
                                        (update 'this new-instance-closure func-env) ; function environment with updated 'this
@@ -192,14 +196,14 @@
 ; Inserts all the corresponding formal parameter and actual parameter from the function into a fstate (function state) until the parameters runs out
 ; returns the function environment
 (define addParams
-  (lambda (formal-params actual-params fstate environment throw)
+  (lambda (formal-params actual-params fstate environment throw compile-time-type instance-closure)
     (if (null? formal-params)
         fstate
         (addParams (restof formal-params)
                    (restof actual-params)
-                   (insert (outer formal-params) (eval-expression (outer actual-params) environment throw) fstate) 
+                   (insert (outer formal-params) (eval-expression (outer actual-params) environment throw compile-time-type instance-closure) fstate) 
                    environment
-                   throw))))
+                   throw compile-time-type instance-closure))))
 
 ; Calls the return continuation with the given expression value
 (define interpret-return
@@ -311,18 +315,26 @@
       ((number? expr) expr)
       ((eq? expr 'true) #t)
       ((eq? expr 'false) #f)
-      ((not (list? expr)) (lookup expr environment))
+      ((not (list? expr)) (lookup-in-both expr environment instance-closure))
       (else (eval-operator expr environment throw compile-time-type instance-closure)))))
+
+(define lookup-in-both
+  (lambda (var environment instance-closure)
+    (if (exists? var environment)
+        (lookup var environment)
+        (lookup var (get-instance-fields-from-instance-closure instance-closure)))))
 
 ; Evaluate a binary (or unary) operator.  Although this is not dealing with side effects, I have the routine evaluate the left operand first and then
 ; pass the result to eval-binary-op2 to evaluate the right operand.  This forces the operands to be evaluated in the proper order in case you choose
 ; to add side effects to the interpreter
+
 (define eval-operator
   (lambda (expr environment throw compile-time-type instance-closure)
     (cond
+      ((eq? 'dot (operator expr)) (lookup (operand2 expr) (get-instance-fields-from-instance-closure (lookup (operand1 expr) environment)))) ; OPERAND1 returning cadr ; if we see the dot operator, we lookup the variable in the instance fields of the correct instance
       ((eq? '! (operator expr)) (not (eval-expression (operand1 expr) environment throw compile-time-type instance-closure)))
       ((and (eq? '- (operator expr)) (= 2 (length expr))) (- (eval-expression (operand1 expr) environment throw compile-time-type instance-closure)))
-      ((eq? 'new (operator expr)) (make-instance-closure (operand1 expr) environment throw))
+      ((eq? 'new (operator expr)) (make-instance-closure (operand1 expr) environment throw compile-time-type instance-closure))
       ((eq? 'funcall (operator expr)) (interpret-function expr environment throw compile-time-type instance-closure))
       (else (eval-binary-op2 expr (eval-expression (operand1 expr) environment throw compile-time-type instance-closure) environment throw compile-time-type instance-closure)))))
 
@@ -353,6 +365,7 @@
         (eq? val1 val2))))
 
 
+  
 ;-----------------
 ; HELPER FUNCTIONS
 ;-----------------
@@ -584,8 +597,8 @@
       (error-break (display (string-append str (makestr "" vals)))))))
 
 
-(parser "newtest3.txt")
-(interpret "newtest3.txt" 'A)
+(parser "test1.txt")
+(interpret "test1.txt" 'A)
 
 
 
