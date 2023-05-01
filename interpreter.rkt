@@ -66,11 +66,13 @@
   (lambda (func-name formal-params function-body environment compile-time-type)
     (list formal-params
           function-body
-          (lambda (func-call-env instance-closure) (insert 'this
-                                                           instance-closure
-                                                           (insert func-name
-                                                                   (lookup func-name (get-methods (lookup (get-runtime-type instance-closure) func-call-env)))
-                                                                    (push-frame environment)))) ; we want to lookup the function in the class closure method list
+          (lambda (func-call-env instance-closure) (insert compile-time-type ; we need to add the function closure, class closure, and 'this to function environment
+                                                           (lookup compile-time-type func-call-env)
+                                                           (insert 'this
+                                                                   instance-closure
+                                                                   (insert func-name
+                                                                           (lookup func-name (get-methods (lookup (get-runtime-type instance-closure) func-call-env)))
+                                                                           (push-frame environment))))) ; we want to lookup the function in the class closure method list
           (lambda (environment) (lookup compile-time-type environment)))))
 
 ; class closure
@@ -609,7 +611,7 @@
 ;(interpret "test2.txt" 'A) ; returns 12 correctly
 ;(interpret "test3.txt" 'A) ; returns 125 correctly
 ;(interpret "test4.txt" 'A) ; returns 36 correctly
-(interpret "test5.txt" 'A) ; - not working
+;(interpret "test5.txt" 'A) ; returns 54 correctly
 ;(interpret "test6.txt" 'A) ; - not working
 ;(interpret "test7.txt" 'C)
 ;(interpret "test8.txt" 'Square)
