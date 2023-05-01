@@ -135,7 +135,7 @@
        (let* ((class-closure (lookup (get-runtime-type instance-closure) environment))
               (closure (lookup (get-function-name statement) (get-methods class-closure)))
               (func-env (addParams (get-formal-params-from-closure closure) (get-actual-params statement) (call-make-env-from-closure closure environment) environment throw)))
-         (if (eq? (length (get-formal-params-from-closure closure)) (length (get-actual-params statement)))
+         (if (eq? (length (get-formal-params-from-closure closure)) (length (cons instance-closure (get-actual-params statement))))
              (interpret-statement-list (get-body-from-closure closure) func-env return
                                        (lambda (env) (myerror "Break used outside of loop"))
                                        (lambda (env) (myerror "Continue used outside of loop"))
