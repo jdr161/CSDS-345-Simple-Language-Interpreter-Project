@@ -82,10 +82,12 @@
     (if (eq? 'var (statement-type statement))
         (insert (operand1 statement) (operand2 statement) environment)
         environment)))
+
 ;Create a function that takes the left hand side of a dot expression and returns that instance.
 (define lefthandside-of-dot
   (lambda (instance-name environment) ; expression will be the lefthand side of dot expression where (dot a x) is the expr is operator1 expr = expression
-    (lookup instance-name environment))) 
+    (lookup instance-name environment)))
+
 ; make instance closure
 (define make-instance-closure
   (lambda (runtime-type environment throw)
@@ -130,7 +132,8 @@
   (lambda (statement environment throw compile-time-type instance-closure)    
     (call/cc
      (lambda (return)
-       (let* ((closure (lookup (get-function-name statement) environment))
+       (let* ((class-closure (lookup (get-runtime-type instance-closure) environment))
+              (closure (lookup (get-function-name statement) (get-methods class-closure)))
               (func-env (addParams (get-formal-params-from-closure closure) (get-actual-params statement) (call-make-env-from-closure closure environment) environment throw)))
          (if (eq? (length (get-formal-params-from-closure closure)) (length (get-actual-params statement)))
              (interpret-statement-list (get-body-from-closure closure) func-env return
