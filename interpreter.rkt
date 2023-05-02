@@ -74,7 +74,7 @@
                                                                                (insert func-name
                                                                                        (lookup func-name (get-methods (lookup (get-runtime-type instance-closure) func-call-env)))
                                                                                        (push-frame environment))))) ; we want to lookup the function in the class closure method list
-          (lambda (environment) (lookup compile-time-type environment)))))
+          compile-time-type)))
 
 ;inserts all class closures from func-call-env into env
 (define insert-all-classes
@@ -123,7 +123,7 @@
     (list formal-params
           function-body
           (lambda (func-call-env) (insert func-name (lookup func-name func-call-env) (push-frame environment)))
-          (lambda (environment) (lookup compile-time-type environment)))))
+          compile-time-type)))
 
 ; helper function
 (define get-instance-fields
@@ -204,7 +204,7 @@
                                        (lambda (env) (myerror "Break used outside of loop"))
                                        (lambda (env) (myerror "Continue used outside of loop"))
                                        (lambda (v env) (throw v environment))
-                                       (get-runtime-type new-instance-closure) ; TODO - this fucks up the polymorphism
+                                       (get-compile-type-from-closure function-closure)
                                        new-instance-closure)
              (myerror "Mismatched parameters and arguments number in function call:" (get-function-name statement))))))))
 
@@ -452,6 +452,7 @@
 (define get-formal-params-from-closure car)
 (define get-actual-params cddr)
 (define call-make-env-from-closure (lambda (closure environment instance-closure) ((caddr closure) environment instance-closure)))
+(define get-compile-type-from-closure cadddr)
 (define get-body-from-closure operand1)
 (define get-super-class operator)
 (define get-methods operand1)
@@ -644,7 +645,7 @@
 ;(interpret "test4.txt" 'A) ; returns 36 correctly
 ;(interpret "test5.txt" 'A) ; returns 54 correctly
 ;(interpret "test6.txt" 'A) ; returns 110 correctly
-(interpret "test7.txt" 'C)
+;(interpret "test7.txt" 'C)
 ;(interpret "test8.txt" 'Square)
 ;(interpret "test9.txt" 'Square)
 ;(interpret "test10.txt" 'List)
